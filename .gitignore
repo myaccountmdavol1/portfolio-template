@@ -1,0 +1,66 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/.next-e2e/
+/.next-e2e-links/
+/.next-e2e-vercel/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# project
+# local PGlite database (PGLITE_DIR=.data/pglite)
+/.data/
+# installed from icon-packs/ by npm run icons:install
+/public/icons/catalog/
+# generated from *.rules.template by `npm run rules:build`
+/firestore.rules
+/storage.rules
+view-source_*.html
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# firebase emulator
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# local-only brainstorming notes
+/.superpowers/brainstorm/

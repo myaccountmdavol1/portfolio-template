@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == '__OWNER_EMAIL__'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /published/{document=**} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    match /draft/{document=**} {
+      allow read, write: if isOwner();
+    }
+
+    match /versions/{document=**} {
+      allow read, write: if isOwner();
+    }
+
+    // Messages-app conversations. Written only by the server (Admin SDK); the owner can read and delete them.
+    // Guestbook notes. Visitors submit through the server (/api/guestbook), which also serves the approved
+    // ones; in the browser only the owner can read (to moderate), approve (update), or delete them.
+    match /guestbook/{noteId} {
+      allow read, update, delete: if isOwner();
+      allow create: if false;
+    }
+
+    // Hall of Fame names. Platinum visitors sign through the server (/api/hall-of-fame), which also serves the
+    // approved ones; in the browser only the owner can read (to moderate), approve (update), or delete them.
+    match /hallOfFame/{entryId} {
+      allow read, update, delete: if isOwner();
+      allow create: if false;
+    }
+
+    // Mail-app messages. Visitors send through the server (/api/contact); only the owner can read them.
+    match /inbox/{messageId} {
+      allow read, update, delete: if isOwner();
+      allow create: if false;
+    }
+
+    match /chatLogs/{conversationId} {
+      allow read, delete: if isOwner();
+      allow create, update: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

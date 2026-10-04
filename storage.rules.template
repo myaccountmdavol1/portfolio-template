@@ -1,0 +1,55 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == '__OWNER_EMAIL__'
+        && request.auth.token.email_verified == true;
+    }
+
+    match /images/{fileName} {
+      allow get: if true;
+      allow list: if isOwner(); // only the owner can browse uploads (the media library)
+      allow create, update: if isOwner()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner();
+    }
+
+    match /docs/{fileName} {
+      allow get: if true;
+      allow list: if isOwner(); // only the owner can browse uploads (the media library)
+      allow create, update: if isOwner()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow delete: if isOwner();
+    }
+
+    match /videos/{fileName} {
+      allow get: if true;
+      allow list: if isOwner(); // only the owner can browse uploads (the media library)
+      allow create, update: if isOwner()
+        && request.resource.size < 100 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+      allow delete: if isOwner();
+    }
+
+    match /audio/{fileName} {
+      allow get: if true;
+      allow list: if isOwner(); // only the owner can browse uploads (the media library)
+      allow create, update: if isOwner()
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+      allow delete: if isOwner();
+    }
+
+    match /icons/{fileName} {
+      allow get: if true;
+      allow list: if isOwner(); // only the owner can browse uploads (the media library)
+      allow create, update: if isOwner()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner();
+    }
+  }
+}
