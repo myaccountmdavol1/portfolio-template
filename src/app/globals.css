@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  /* --site-body-font is set on the site's root when the owner picks a body font (Site settings → Style). */
+  --font-sans: var(--site-body-font, var(--font-geist-sans)), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-serif: var(--font-instrument-serif), Georgia, serif;
 }
@@ -17,6 +18,11 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   background: #1d1c1a;
+}
+
+/* The site's body font; without one this is the same Geist stack as body, so nothing changes. */
+[data-layout] {
+  font-family: var(--site-body-font, var(--font-geist-sans)), system-ui, sans-serif;
 }
 
 /* Visible keyboard focus everywhere; dialogs focused by script (tabindex=-1) don't get a ring. */

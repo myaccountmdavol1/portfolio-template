@@ -12,6 +12,7 @@ import { ActionPicker } from '../ActionPicker';
 import { useEditor } from '../EditorContext';
 import { ColorField, LinkListEditor, ListEditor, NumberField, Section, SelectField, smallButton, TextField, Toggle, UploadField } from '../fields';
 import { ScreensaverSection } from './ScreensaverSection';
+import { StyleSection } from './StyleSection';
 
 const MENU_BAR_PARTS: [MenuBarPart, string][] = [
   ['name', 'Portfolio title (“…’s Portfolio”)'],
@@ -47,6 +48,8 @@ export function SiteForm() {
         <TextField label="Big line" value={site.headline.line2} onChange={(line2) => setNested('headline', { line2 }, 'line2')} />
         <HeadlineLook />
       </Section>
+
+      <StyleSection />
 
       <Section title="Look">
         <button type="button" onClick={editor.openWallpaperPicker} className={`${smallButton} self-start`}>
@@ -226,17 +229,7 @@ function HeadlineLook() {
     );
   return (
     <div className="flex flex-col gap-2.5 rounded-md border border-black/10 bg-white/60 p-2.5">
-      <span className="text-xs font-medium text-[#3d3a35]">Style</span>
-      <SelectField
-        label="Font"
-        value={style.font ?? 'serif'}
-        options={[
-          { value: 'serif', label: 'Serif (elegant)' },
-          { value: 'sans', label: 'Sans-serif (clean)' },
-          { value: 'mono', label: 'Monospace (techy)' },
-        ]}
-        onChange={(font) => setStyle({ font }, 'font', true)}
-      />
+      <span className="text-xs font-medium text-[#3d3a35]">Look</span>
       <div>
         <label htmlFor="headline-size" className="mb-1 flex justify-between text-xs font-medium text-[#3d3a35]">
           <span>Size</span>

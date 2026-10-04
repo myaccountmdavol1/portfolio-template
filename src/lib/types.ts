@@ -464,7 +464,7 @@ export interface MenuItem {
 /** Looks for the headline on the wallpaper. Every field is optional; missing = the original look. */
 export interface HeadlineStyle {
   color?: string; // '' or missing = matches the wallpaper
-  font?: 'serif' | 'sans' | 'mono';
+  font?: 'serif' | 'sans' | 'mono'; // legacy: the editor no longer writes it; SiteStyle.headingFont wins when set
   size?: number; // percent, 50–150
   position?: 'top' | 'center' | 'bottom';
   shadow?: boolean; // helps on photo wallpapers
@@ -512,6 +512,12 @@ export interface ScreensaverSettings {
   lock?: LockSettings;
 }
 
+/** Fonts (and, later, the icon pack) picked in Site settings → Style. Every field is optional; missing = the original look. */
+export interface SiteStyle {
+  headingFont?: string; // a font id from src/lib/fonts.ts
+  bodyFont?: string; // a font id from src/lib/fonts.ts
+}
+
 export interface SiteSettings {
   ownerName: string;
   email: string;
@@ -521,6 +527,8 @@ export interface SiteSettings {
   /** For images, `tone` is how bright the picture is (measured on upload; missing = treat as dark → white text). */
   wallpaper: { kind: 'preset'; preset: WallpaperPreset } | { kind: 'image'; imageUrl: string; tone?: 'light' | 'dark' };
   accent: string; // hex colour
+  /** Fonts picked in Site settings → Style. Missing = Instrument Serif headline, Geist body. */
+  style?: SiteStyle;
   /** Default look for visitors; they can switch it in Control Center. Missing = 'light'. */
   appearance?: 'light' | 'dark' | 'auto';
   clock24: boolean;

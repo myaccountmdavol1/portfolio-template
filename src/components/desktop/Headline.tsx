@@ -5,6 +5,7 @@ import { useEditor } from '@/components/editor/EditorContext';
 import { updateSite } from '@/lib/editor/mutations';
 import { DOCK_RESERVED_H, MENU_BAR_H } from '@/lib/geometry';
 import { resolveHeadline } from '@/lib/headline';
+import { headingFontFamily } from '@/lib/fonts';
 import type { SiteSettings } from '@/lib/types';
 
 export function Headline({ site, ink, inkShadow }: { site: SiteSettings; ink: string; inkShadow?: string }) {
@@ -24,7 +25,7 @@ export function Headline({ site, ink, inkShadow }: { site: SiteSettings; ink: st
       value
     );
 
-  const look = resolveHeadline(site.headline.style, ink, inkShadow);
+  const look = resolveHeadline(site.headline.style, ink, inkShadow, headingFontFamily(site));
   const size = (min: number, vw: number, max: number) => `clamp(${min * look.scale}px, ${vw * look.scale}vw, ${max * look.scale}px)`;
 
   return (

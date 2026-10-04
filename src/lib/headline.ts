@@ -12,13 +12,14 @@ export interface ResolvedHeadline {
 }
 
 /** Turns the owner's headline options into concrete styles, with the original look as the default. */
-export function resolveHeadline(style: HeadlineStyle | undefined, ink: string, wallpaperShadow?: string): ResolvedHeadline {
+/** `headingFamily`: the font picked in Site settings → Style (see headingFontFamily in fonts.ts); it wins over `style.font`. */
+export function resolveHeadline(style: HeadlineStyle | undefined, ink: string, wallpaperShadow?: string, headingFamily?: string): ResolvedHeadline {
   const s = style ?? {};
   const size = Math.min(150, Math.max(50, s.size ?? 100));
   return {
     text: {
       color: s.color?.trim() || ink,
-      fontFamily: FONTS[s.font ?? 'serif'] ?? FONTS.serif,
+      fontFamily: headingFamily ?? FONTS[s.font ?? 'serif'] ?? FONTS.serif,
       // A custom colour opts out of the wallpaper's automatic shadow (the owner chose it deliberately).
       textShadow: s.shadow ? '0 2px 18px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.25)' : s.color?.trim() ? undefined : wallpaperShadow,
     },

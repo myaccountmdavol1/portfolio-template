@@ -170,3 +170,11 @@ test.describe('404 page', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 });
+
+test('a site without Style choices keeps its original fonts and loads no Google Fonts', async ({ page }) => {
+  await skipIncomingCall(page);
+  await page.goto('/');
+  await expect(page.getByTestId('headline')).toHaveCSS('font-family', /Instrument Serif/);
+  await expect(page.locator('[data-layout="desktop"]')).toHaveCSS('font-family', /Geist/);
+  await expect(page.locator('link[href^="https://fonts.googleapis.com"]')).toHaveCount(0);
+});

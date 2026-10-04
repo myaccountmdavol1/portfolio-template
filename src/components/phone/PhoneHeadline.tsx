@@ -1,9 +1,10 @@
+import { headingFontFamily } from '@/lib/fonts';
 import { resolveHeadline } from '@/lib/headline';
 import type { SiteSettings } from '@/lib/types';
 
 /** The desktop headline, scaled for the phone and drawn on the wallpaper behind the icons. */
 export function PhoneHeadline({ site, ink, inkShadow }: { site: SiteSettings; ink: string; inkShadow?: string }) {
-  const look = resolveHeadline(site.headline.style, ink, inkShadow);
+  const look = resolveHeadline(site.headline.style, ink, inkShadow, headingFontFamily(site));
   const place = look.justify === 'flex-start' ? { top: '30%' } : look.justify === 'center' ? { top: '42%' } : { bottom: '6%' };
   return (
     <div

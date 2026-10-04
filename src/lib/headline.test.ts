@@ -26,4 +26,9 @@ describe('resolveHeadline', () => {
   it('treats a blank colour as “match the wallpaper”', () => {
     expect(resolveHeadline({ color: '  ' }, '#eee').text.color).toBe('#eee');
   });
+
+  it('uses the Style headline font when given, over the older font option', () => {
+    expect(resolveHeadline({ font: 'mono' }, '#111', undefined, 'var(--site-heading-font)').text.fontFamily).toBe('var(--site-heading-font)');
+    expect(resolveHeadline({ font: 'mono' }, '#111', undefined, undefined).text.fontFamily).toBe('var(--font-mono)');
+  });
 });

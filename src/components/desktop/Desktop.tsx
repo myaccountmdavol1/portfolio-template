@@ -12,6 +12,8 @@ import { useFinale } from '@/components/finale/useFinale';
 import { AppIcon } from '@/components/AppIcon';
 import { startFinale } from '@/lib/gameEvents';
 import { SiteContext } from '@/components/SiteContext';
+import { SiteFonts } from '@/components/SiteFonts';
+import { siteFontVars } from '@/lib/fonts';
 import { IncomingCall } from '@/components/IncomingCall';
 import { Spotlight, useSpotlightShortcut } from '@/components/Spotlight';
 import { openExternal, runAction } from '@/lib/actions';
@@ -266,8 +268,9 @@ export function Desktop({ data, linkSync = false }: { data: SiteData; linkSync?:
       data-touring-cursor={tour.playing && tour.stopOnMove ? 'hidden' : undefined}
       data-wallpaper={site.wallpaper.kind === 'preset' ? site.wallpaper.preset : 'image'}
       className="fixed inset-0 select-none overflow-hidden"
-      style={{ background: wp.background, color: wp.ink }}
+      style={{ background: wp.background, color: wp.ink, ...siteFontVars(site) }}
     >
+      <SiteFonts site={site} />
       <MenuBar
         site={site}
         ink={wp.ink}

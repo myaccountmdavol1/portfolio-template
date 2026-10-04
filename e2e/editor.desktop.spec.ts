@@ -1157,7 +1157,7 @@ test.describe('wallet, social, phone, photo links, headline style', () => {
 
   test('headline style: font, size, and colour', async ({ page }) => {
     await toolbar(page).getByRole('button', { name: 'Site' }).click();
-    await inspector(page).getByLabel('Font').selectOption('mono');
+    await inspector(page).getByRole('radiogroup', { name: 'Headline font' }).getByRole('radio', { name: 'Geist Mono' }).click();
     await inspector(page).getByLabel('Size').fill('130');
     await inspector(page).getByLabel('Colour', { exact: true }).first().fill('#ff0000'); // the headline's is first; the Flurry screen saver has more
     const headline = page.getByTestId('headline');
@@ -1604,4 +1604,29 @@ test('badges: an image that stops loading shows a badge icon instead of a broken
   const win = page.getByRole('dialog', { name: 'Badges' });
   await win.getByRole('radio', { name: 'Shelf' }).click();
   await expect(win.getByRole('list', { name: 'Badge shelf' }).getByTestId('badge-art-fallback')).toBeVisible();
+});
+
+test('Style: headline and body fonts apply live and are published', async ({ page }) => {
+  await openEditor(page);
+  await toolbar(page).getByRole('button', { name: 'Site' }).click();
+  const inspector = page.getByRole('complementary', { name: 'Inspector' });
+  const headingFonts = inspector.getByRole('radiogroup', { name: 'Headline font' });
+  const bodyFonts = inspector.getByRole('radiogroup', { name: 'Body font' });
+  await expect(headingFonts.getByRole('radio', { name: 'Instrument Serif' })).toHaveAttribute('aria-checked', 'true');
+  await expect(bodyFonts.getByRole('radio', { name: 'Geist', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(headingFonts.getByRole('radio', { name: 'Pacifico' })).toHaveCSS('font-family', /Pacifico/);
+
+  await headingFonts.getByRole('radio', { name: 'Playfair Display' }).click();
+  await bodyFonts.getByRole('radio', { name: 'Nunito' }).click();
+  await expect(headingFonts.getByRole('radio', { name: 'Playfair Display' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('headline')).toHaveCSS('font-family', /Playfair Display/);
+  await expect(page.locator('[data-layout="desktop"]')).toHaveCSS('font-family', /Nunito/);
+  await expect(page.locator('head link[rel="stylesheet"][href*="family=Playfair+Display:"][href*="family=Nunito:"]')).toHaveCount(1);
+
+  page.once('dialog', (d) => d.accept());
+  await toolbar(page).getByRole('button', { name: 'Publish' }).click();
+  await expect(toolbar(page).getByRole('button', { name: 'Published ✓' })).toBeVisible();
+  const published = await page.evaluate(() => localStorage.getItem('portfolio:localPublished'));
+  expect(published).toContain('"headingFont":"playfair-display"');
+  expect(published).toContain('"bodyFont":"nunito"');
 });

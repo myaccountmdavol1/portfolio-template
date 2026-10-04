@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { iconInitials, lighten } from './siteIcon';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { iconInitials, lighten, loadHeadlineFont } from './siteIcon';
 
 describe('lighten', () => {
   it('mixes a colour towards white', () => {
@@ -16,5 +16,33 @@ describe('iconInitials', () => {
     expect(iconInitials({ ownerName: 'Alex Rivera' })).toBe('AR');
     expect(iconInitials({ ownerName: 'Cher' })).toBe('C');
     expect(iconInitials({ ownerName: '' })).toBe('•');
+  });
+});
+
+describe('loadHeadlineFont', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('asks Google Fonts for the given family, subset to the text', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        return urls.length === 1
+          ? new Response("@font-face { src: url(https://fonts.gstatic.com/x.ttf) format('truetype'); }")
+          : new Response(new Uint8Array([1, 2, 3]));
+      }),
+    );
+    const font = await loadHeadlineFont('Hi', 'Playfair Display');
+    expect(urls[0]).toBe('https://fonts.googleapis.com/css2?family=Playfair+Display&text=Hi');
+    expect(urls[1]).toBe('https://fonts.gstatic.com/x.ttf');
+    expect(font?.byteLength).toBe(3);
+  });
+
+  it('still defaults to Instrument Serif', async () => {
+    const fetchMock = vi.fn(async () => new Response(''));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await loadHeadlineFont('Hi')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith('https://fonts.googleapis.com/css2?family=Instrument+Serif&text=Hi');
   });
 });

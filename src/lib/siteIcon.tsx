@@ -17,10 +17,10 @@ export function iconInitials(site: Pick<SiteSettings, 'ownerName'>): string {
   return initials(site.ownerName) || '•';
 }
 
-/** Instrument Serif (the headline font) for just these letters; null if Google Fonts is unreachable. */
-export async function loadHeadlineFont(text: string): Promise<ArrayBuffer | null> {
+/** A Google Fonts family (the headline font; Instrument Serif by default) for just these letters; null if Google Fonts is unreachable. */
+export async function loadHeadlineFont(text: string, family = 'Instrument Serif'): Promise<ArrayBuffer | null> {
   try {
-    const css = await (await fetch(`https://fonts.googleapis.com/css2?family=Instrument+Serif&text=${encodeURIComponent(text)}`)).text();
+    const css = await (await fetch(`https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}&text=${encodeURIComponent(text)}`)).text();
     const url = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/)?.[1];
     if (!url) return null;
     const res = await fetch(url);

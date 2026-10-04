@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
+import { ogHeadingFamily } from '@/lib/fonts';
 import { linkPreview, type ResolvedLink } from '@/lib/deepLink';
 import { lighten, loadHeadlineFont } from '@/lib/siteIcon';
 import type { IconSpec, SiteData } from '@/lib/types';
@@ -65,7 +66,8 @@ export async function siteCard({ site, apps }: SiteData): Promise<ImageResponse>
   const headline = site.headline.show ? site.headline.line2 || name : name;
   const kicker = site.headline.show ? site.headline.line1 : 'Portfolio';
   const icons = (await Promise.all(apps.filter((a) => a.visible).map((a) => iconSrc(a.icon)))).filter((s): s is string => !!s).slice(0, 8);
-  const font = await loadHeadlineFont(`${kicker}${headline}${name}’s Portfolio`);
+  const family = ogHeadingFamily(site);
+  const font = await loadHeadlineFont(`${kicker}${headline}${name}’s Portfolio`, family);
   const glow = lighten(site.accent, 0.1);
 
   return new ImageResponse(
@@ -89,7 +91,7 @@ export async function siteCard({ site, apps }: SiteData): Promise<ImageResponse>
         {/* Headline */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', padding: '0 80px' }}>
           <div style={{ display: 'flex', fontSize: 34, opacity: 0.75 }}>{kicker}</div>
-          <div style={{ display: 'flex', fontSize: headline.length > 22 ? 92 : 120, lineHeight: 1.02, fontFamily: font ? 'Instrument Serif' : 'system-ui', marginTop: 8 }}>{headline}</div>
+          <div style={{ display: 'flex', fontSize: headline.length > 22 ? 92 : 120, lineHeight: 1.02, fontFamily: font ? family : 'system-ui', marginTop: 8 }}>{headline}</div>
         </div>
         {/* Dock */}
         {icons.length > 0 && (
@@ -104,7 +106,7 @@ export async function siteCard({ site, apps }: SiteData): Promise<ImageResponse>
         )}
       </div>
     ),
-    { ...OG_SIZE, headers, fonts: font ? [{ name: 'Instrument Serif', data: font, style: 'normal', weight: 400 }] : undefined },
+    { ...OG_SIZE, headers, fonts: font ? [{ name: family, data: font, style: 'normal', weight: 400 }] : undefined },
   );
 }
 
@@ -118,8 +120,9 @@ export async function itemCard(data: SiteData, target: ResolvedLink, origin: str
   const name = site.ownerName;
   const description = preview.description ? shorten(preview.description, 120) : '';
   // Every string drawn on the card goes into the font subset, so no letter falls back to another face.
-  const font = await loadHeadlineFont(`${app.title}${app.title.toUpperCase()}${preview.title}${description}${name}’s Portfolio`);
-  const family = font ? 'Instrument Serif' : 'system-ui';
+  const heading = ogHeadingFamily(site);
+  const font = await loadHeadlineFont(`${app.title}${app.title.toUpperCase()}${preview.title}${description}${name}’s Portfolio`, heading);
+  const family = font ? heading : 'system-ui';
   const glow = lighten(site.accent, 0.1);
   const isPhoto = app.type === 'photos' && !!target.itemKey;
 
@@ -157,6 +160,6 @@ export async function itemCard(data: SiteData, target: ResolvedLink, origin: str
         </div>
       </div>
     ),
-    { ...OG_SIZE, headers, fonts: font ? [{ name: 'Instrument Serif', data: font, style: 'normal', weight: 400 }] : undefined },
+    { ...OG_SIZE, headers, fonts: font ? [{ name: heading, data: font, style: 'normal', weight: 400 }] : undefined },
   );
 }
