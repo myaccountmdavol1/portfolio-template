@@ -33,7 +33,7 @@ export const GLYPHS: Partial<Record<CatalogIcon['slug'], Glyph>> = {
   netflix: { brand: siNetflix },
 };
 
-const GRADIENTS: Record<CatalogIcon['category'], [string, string]> = {
+export const GRADIENTS: Record<CatalogIcon['category'], [string, string]> = {
   productivity: ['#5ac8fa', '#007aff'],
   media: ['#ff8a65', '#ff2d55'],
   system: ['#a1a1aa', '#52525b'],
@@ -51,16 +51,17 @@ export function initials(label: string): string {
     .join('');
 }
 
-function glyphMarkup(icon: CatalogIcon): string {
+/** The glyph for an icon (Lucide symbol, Simple Icons brand, or initials) centred on a 256px canvas, in `color`. */
+export function glyphMarkup(icon: CatalogIcon, color = '#fff'): string {
   const g = GLYPHS[icon.slug];
   if (!g) {
-    return `<text x="128" y="128" dy=".35em" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="104" fill="#fff">${initials(icon.label)}</text>`;
+    return `<text x="128" y="128" dy=".35em" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="104" fill="${color}">${initials(icon.label)}</text>`;
   }
   if ('brand' in g) {
     // Simple Icons paths are drawn on a 24x24 grid: 24 * 6 = 144px, centred.
-    return `<g transform="translate(56 56) scale(6)"><path d="${g.brand.path}" fill="#fff"/></g>`;
+    return `<g transform="translate(56 56) scale(6)"><path d="${g.brand.path}" fill="${color}"/></g>`;
   }
-  const inner = renderToStaticMarkup(createElement(g.lucide, { size: 152, color: '#fff', strokeWidth: 1.75 }));
+  const inner = renderToStaticMarkup(createElement(g.lucide, { size: 152, color, strokeWidth: 1.75 }));
   return `<g transform="translate(52 52)">${inner}</g>`;
 }
 

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AchievementToast } from '@/components/AchievementToast';
+import { IconPackContext } from '@/components/IconPackContext';
 import { AppIcon } from '@/components/AppIcon';
 import { setSecretAchievements, trackEvent } from '@/lib/gameEvents';
 import { fillSlots, seeded, textCells } from '@/lib/notFound';
@@ -22,6 +23,8 @@ interface NotFoundViewProps {
   game: boolean;
   /** The site has a Game Center with the secret “Lost & found” achievement switched on. */
   lostAndFound: boolean;
+  /** The site's icon pack (Site settings → Style). */
+  iconPack?: string;
 }
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -31,7 +34,7 @@ const STAGGER_MS = 22;
 const REPEL_R = 130;
 
 /** The site's own app icons fly in from everywhere and settle into “404”. */
-export function NotFoundView({ icons, message, imageUrl, game, lostAndFound }: NotFoundViewProps) {
+export function NotFoundView({ icons, message, imageUrl, game, lostAndFound, iconPack }: NotFoundViewProps) {
   const layout = useMemo(() => textCells('404'), []);
   const slots = useMemo(() => fillSlots(icons, layout.cells.length), [icons, layout.cells.length]);
   // Seeded, so the server and the first browser render agree (no hydration mismatch).
@@ -105,6 +108,7 @@ export function NotFoundView({ icons, message, imageUrl, game, lostAndFound }: N
   const height = layout.rows * cell;
 
   return (
+    <IconPackContext.Provider value={iconPack}>
     <main className="fixed inset-0 flex flex-col items-center justify-center gap-7 overflow-hidden bg-[#111] px-4 py-8 text-white">
       {imageUrl && (
         <>
@@ -205,5 +209,6 @@ export function NotFoundView({ icons, message, imageUrl, game, lostAndFound }: N
       {/* The faintest of hints. */}
       <p aria-hidden className="absolute bottom-3 m-0 select-none text-[11px] tracking-[.3em] text-white/20">↑↑↓↓←→←→BA</p>
     </main>
+    </IconPackContext.Provider>
   );
 }

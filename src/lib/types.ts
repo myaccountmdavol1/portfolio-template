@@ -546,6 +546,7 @@ export interface ScreensaverSettings {
 export interface SiteStyle {
   headingFont?: string; // a font id from src/lib/fonts.ts
   bodyFont?: string; // a font id from src/lib/fonts.ts
+  iconPack?: string; // an icon pack id (ICON_PACKS in src/lib/iconCatalog.ts); missing = the build's default pack
 }
 
 export interface SiteSettings {

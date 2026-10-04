@@ -46,8 +46,8 @@ next-env.d.ts
 # project
 # local PGlite database (PGLITE_DIR=.data/pglite)
 /.data/
-# installed from icon-packs/ by npm run icons:install
-/public/icons/catalog/
+# installed from icon-packs/ by npm run icons:install (every pack, catalog/ and packs.json)
+/public/icons/
 # generated from *.rules.template by `npm run rules:build`
 /firestore.rules
 /storage.rules

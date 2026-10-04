@@ -7,5 +7,5 @@ export default function globalSetup() {
   } catch {
     // no .env.local: fall back to the default pack
   }
-  installPack('icon-packs', 'public/icons/catalog', process.env.ICON_PACK || undefined);
+  installPack('icon-packs', 'public/icons', process.env.ICON_PACK || undefined);
 }

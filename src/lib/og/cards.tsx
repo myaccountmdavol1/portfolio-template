@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { iconPngPaths } from './iconFile';
 import { ImageResponse } from 'next/og';
 import { ogHeadingFamily } from '@/lib/fonts';
 import { linkPreview, type ResolvedLink } from '@/lib/deepLink';
@@ -12,16 +12,18 @@ export const OG_SIZE = { width: 1200, height: 630 };
 // Link unfurlers cache these themselves; five minutes at the edge picks up new publishes quickly.
 const headers = { 'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400' };
 
-/** Catalog icons as data URLs (the image renderer reads PNGs, not WebP). */
-async function iconSrc(icon: IconSpec): Promise<string | null> {
+/** Catalog icons as data URLs (the image renderer reads PNGs, not WebP), drawn in the site's icon pack. */
+async function iconSrc(icon: IconSpec, pack: string | undefined): Promise<string | null> {
   if (icon.kind === 'image') return /^https:\/\//.test(icon.url) ? icon.url : null;
   if (icon.kind !== 'catalog') return null;
-  try {
-    const png = await readFile(join(process.cwd(), 'public/icons/catalog', `${icon.slug}.png`));
-    return `data:image/png;base64,${png.toString('base64')}`;
-  } catch {
-    return null;
+  for (const path of iconPngPaths(icon.slug, pack)) {
+    try {
+      return `data:image/png;base64,${(await readFile(path)).toString('base64')}`;
+    } catch {
+      // not in this pack; try the next
+    }
   }
+  return null;
 }
 
 const MAX_ART_BYTES = 4 * 1024 * 1024;
@@ -65,7 +67,7 @@ export async function siteCard({ site, apps }: SiteData): Promise<ImageResponse>
   const name = site.ownerName;
   const headline = site.headline.show ? site.headline.line2 || name : name;
   const kicker = site.headline.show ? site.headline.line1 : 'Portfolio';
-  const icons = (await Promise.all(apps.filter((a) => a.visible).map((a) => iconSrc(a.icon)))).filter((s): s is string => !!s).slice(0, 8);
+  const icons = (await Promise.all(apps.filter((a) => a.visible).map((a) => iconSrc(a.icon, site.style?.iconPack)))).filter((s): s is string => !!s).slice(0, 8);
   const family = ogHeadingFamily(site);
   const font = await loadHeadlineFont(`${kicker}${headline}${name}’s Portfolio`, family);
   const glow = lighten(site.accent, 0.1);
@@ -116,7 +118,7 @@ export async function itemCard(data: SiteData, target: ResolvedLink, origin: str
   const app = apps.find((a) => a.id === target.appId);
   const preview = linkPreview(data, target);
   if (!app || !preview) return siteCard(data);
-  const art = (await artSrc(preview.imageUrl, origin)) ?? (await iconSrc(app.icon));
+  const art = (await artSrc(preview.imageUrl, origin)) ?? (await iconSrc(app.icon, site.style?.iconPack));
   const name = site.ownerName;
   const description = preview.description ? shorten(preview.description, 120) : '';
   // Every string drawn on the card goes into the font subset, so no letter falls back to another face.

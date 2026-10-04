@@ -61,9 +61,11 @@ Open http://localhost:3000. With no Firebase settings it shows the sample site. 
 
 ## Icons
 
-`ICON_PACK` in `.env.local` chooses a folder in `icon-packs/`. It is `default` if unset, and the `default` pack ships with the template. Packs are copied into `public/icons/catalog` automatically before `dev`, `build` and the tests (`npm run icons:install` does it by hand).
+Each site picks its icon pack in the editor: **Site settings → Style → Icon pack**. The template ships six packs in `icon-packs/`: `default`, `glass`, `outline`, `pastel`, `mono-light` and `mono-dark`, all drawn from openly licensed glyphs (see each pack’s `LICENSE.md`). Before `dev`, `build` and the tests, `npm run icons:install` copies every pack to `public/icons/<pack>/` and writes `public/icons/packs.json`, the list the editor offers.
 
-To add your own pack, create `icon-packs/<name>/` with a `<slug>.png` and a `<slug>.webp` for every slug in `src/lib/iconCatalog.ts`, then set `ICON_PACK=<name>`. To regenerate the default pack, run `npm run icons:generate-default`.
+`ICON_PACK` in `.env.local` chooses the pack for a site that hasn’t picked one. It is `default` if unset.
+
+To add your own pack, create `icon-packs/<name>/` with a `<slug>.png` and a `<slug>.webp` for every slug in `src/lib/iconCatalog.ts` and a `LICENSE.md`, and add it to `ICON_PACKS` in that file. To redraw the built-in packs after adding catalog icons, run `npm run icons:generate` (or `npm run icons:generate -- glass` for one).
 
 ## Editing your portfolio
 

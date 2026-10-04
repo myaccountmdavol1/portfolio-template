@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "icons:install": "tsx --env-file-if-exists=.env.local scripts/iconPacks.ts",
-    "icons:generate-default": "tsx scripts/generateDefaultIcons.ts",
+    "icons:generate": "tsx scripts/generateIconPacks.ts",
+    "icons:generate-default": "tsx scripts/generateIconPacks.ts default",
     "predev": "npm run icons:install",
     "prebuild": "npm run icons:install",
     "pretest": "npm run icons:install",

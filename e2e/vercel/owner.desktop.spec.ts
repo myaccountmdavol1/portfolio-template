@@ -104,6 +104,38 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     await visitor.close();
   });
 
+  await test.step('restyle (fonts, wallpaper, icon pack), publish, and a visitor sees all three', async () => {
+    await toolbar(page).getByRole('button', { name: 'Site' }).click();
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await inspector.getByRole('radiogroup', { name: 'Headline font' }).getByRole('radio', { name: 'Playfair Display' }).click();
+    await inspector.getByRole('radiogroup', { name: 'Body font' }).getByRole('radio', { name: 'Nunito' }).click();
+    await inspector.getByRole('radiogroup', { name: 'Icon pack' }).getByRole('radio', { name: 'Outline' }).click();
+    await toolbar(page).getByRole('button', { name: 'Wallpaper' }).click();
+    await page.getByRole('dialog', { name: 'Wallpaper' }).getByRole('button', { name: 'Midnight' }).click();
+    await expect
+      .poll(async () => {
+        const { draft } = (await (await page.request.get('/api/owner/draft')).json()) as {
+          draft: { site: { style?: { headingFont?: string; bodyFont?: string; iconPack?: string }; wallpaper: { preset?: string } } } | null;
+        };
+        const s = draft?.site;
+        return `${s?.style?.headingFont}/${s?.style?.bodyFont}/${s?.style?.iconPack}/${s?.wallpaper.preset}`;
+      }, { timeout: 20_000 })
+      .toBe('playfair-display/nunito/outline/midnight');
+    page.once('dialog', (d) => d.accept());
+    await toolbar(page).getByRole('button', { name: 'Publish' }).click();
+    await expect(toolbar(page).getByRole('button', { name: 'Published ✓' })).toBeVisible({ timeout: 20_000 });
+
+    const visitor = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const v = await visitor.newPage();
+    await v.goto('/');
+    await expect(toolbar(v)).toHaveCount(0);
+    await expect(v.getByTestId('headline')).toHaveCSS('font-family', /Playfair Display/);
+    await expect(v.locator('[data-layout="desktop"]')).toHaveCSS('font-family', /Nunito/);
+    await expect(v.locator('[data-layout="desktop"]')).toHaveAttribute('data-wallpaper', 'midnight');
+    await expect(desktopIcon(v, 'Project Two').locator('img')).toHaveAttribute('src', '/icons/outline/finder.webp');
+    await visitor.close();
+  });
+
   await test.step('upload a photo to the media library', async () => {
     await toolbar(page).getByRole('button', { name: 'More' }).click();
     await page.getByRole('menuitem', { name: 'Media library…' }).click();

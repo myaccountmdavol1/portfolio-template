@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IconPackContext } from '@/components/IconPackContext';
 import type { FocusRequest } from '@/components/AppLinkContext';
 import { useDeepLinkSync } from '@/hooks/useDeepLinkSync';
 import { deepLinkParams, withDeepLink, type LinkTarget } from '@/lib/deepLink';
@@ -134,6 +135,7 @@ export function Phone({ data, framed = false, linkSync = false }: { data: SiteDa
 
   return (
     <SiteContext.Provider value={{ data, openApp: (id: string) => openApp(id), openTarget, variant: 'phone' }}>
+    <IconPackContext.Provider value={site.style?.iconPack}>
     <div
       data-layout="phone"
       data-touring={tour.playing || undefined}
@@ -273,6 +275,7 @@ export function Phone({ data, framed = false, linkSync = false }: { data: SiteDa
         <PhoneLockScreen data={data} dark={appearance.dark} unlocking={saver.phase === 'unlocking'} isolateKeys={!saver.preview} onUnlock={saver.unlock} />
       )}
     </div>
+    </IconPackContext.Provider>
     </SiteContext.Provider>
   );
 }

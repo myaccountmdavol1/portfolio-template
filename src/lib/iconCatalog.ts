@@ -138,9 +138,67 @@ export const DEFAULT_CATALOG_FOR_BUILTIN: Record<BuiltinIconName, CatalogIconSlu
   globe: 'maps',
 };
 
-export function catalogIconUrl(slug: CatalogIconSlug): string {
+export interface IconPackInfo {
+  id: string;
+  label: string;
+  /** Served only where ICON_PACK names it, and never exported to the template. */
+  private?: boolean;
+}
+
+/** Packs in icon-packs/ that the editor can name. A pack folder not listed here is still served, labelled by its id. */
+export const ICON_PACKS: IconPackInfo[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'glass', label: 'Glass' },
+  { id: 'outline', label: 'Outline' },
+  { id: 'pastel', label: 'Pastel' },
+  { id: 'mono-light', label: 'Mono light' },
+  { id: 'mono-dark', label: 'Mono dark' },
+  { id: 'macos', label: 'macOS', private: true },
+];
+
+export const PRIVATE_ICON_PACKS = ICON_PACKS.filter((p) => p.private).map((p) => p.id);
+
+/** /icons/packs.json, written by npm run icons:install: the build's default pack and every pack it serves. */
+export interface IconPackManifest {
+  default: string;
+  packs: string[];
+}
+
+/** Validates parsed /icons/packs.json; anything of the wrong shape is null. */
+export function parseIconPackManifest(json: unknown): IconPackManifest | null {
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+  const { default: def, packs } = json as { default?: unknown; packs?: unknown };
+  if (typeof def !== 'string' || !Array.isArray(packs) || !packs.every((p) => typeof p === 'string')) return null;
+  return { default: def, packs: packs as string[] };
+}
+
+const PACK_ID = /^[a-z0-9-]+$/;
+
+/** A pack id safe to put in a URL or a file path: lowercase letters, digits and hyphens only. */
+export function isPackId(pack: string | undefined): pack is string {
+  return !!pack && PACK_ID.test(pack);
+}
+
+/** `pack`: the site's icon pack (Site settings → Style); missing = the build's default pack at /icons/catalog. */
+export function catalogIconUrl(slug: CatalogIconSlug, pack?: string): string {
   // WebP copies of the PNGs (about 1/6 the size). The PNGs stay for links saved with their old URLs.
-  return `/icons/catalog/${slug}.webp`;
+  return isPackId(pack) ? `/icons/${pack}/${slug}.webp` : `/icons/catalog/${slug}.webp`;
+}
+
+/** A saved /icons/catalog/<slug>.png|webp link (dock links, older data) drawn in the site's pack; anything else unchanged. */
+export function packIconUrl(url: string, pack?: string): string {
+  const match = /^\/icons\/catalog\/([a-z0-9-]+)\.(png|webp)$/.exec(url);
+  return match && isPackId(pack) ? `/icons/${pack}/${match[1]}.webp` : url;
+}
+
+/** The served packs in registry order, then any others by id. */
+export function orderedPacks(served: string[]): { id: string; label: string }[] {
+  const known = ICON_PACKS.filter((p) => served.includes(p.id)).map(({ id, label }) => ({ id, label }));
+  const others = served
+    .filter((id) => !ICON_PACKS.some((p) => p.id === id))
+    .sort()
+    .map((id) => ({ id, label: id }));
+  return [...known, ...others];
 }
 
 export type CatalogCategory = CatalogIcon['category'];

@@ -1679,3 +1679,59 @@ test('scenery photos are offered in the picker and load', async ({ page }) => {
     expect((await page.request.get(`/wallpapers/${p.id}-thumb.webp`)).status(), p.id).toBe(200);
   }
 });
+
+test('icons fall back to the default pack when the chosen pack is not served', async ({ page }) => {
+  await openEditor(page);
+  await page.evaluate(() => {
+    const draft = JSON.parse(localStorage.getItem('portfolio:localDraft')!);
+    const data = draft.data ?? draft;
+    data.site.style = { ...data.site.style, iconPack: 'no-such-pack' };
+    localStorage.setItem('portfolio:localDraft', JSON.stringify(draft));
+  });
+  await page.reload();
+  await expect(toolbar(page)).toBeVisible();
+  const dock = page.getByRole('navigation', { name: 'Dock' });
+  const img = dock.getByRole('link', { name: 'LinkedIn' }).locator('img').first();
+  await expect(img).toHaveAttribute('src', /icons\/catalog\//);
+  await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
+});
+
+test('Style: the icon pack redraws every catalog icon and is published', async ({ page }) => {
+  await openEditor(page);
+  const manifest = (await (await page.request.get('/icons/packs.json')).json()) as { default: string; packs: string[] };
+  for (const id of ['default', 'glass', 'outline', 'pastel', 'mono-light', 'mono-dark']) expect(manifest.packs).toContain(id);
+  await toolbar(page).getByRole('button', { name: 'Site' }).click();
+  const packs = page.getByRole('complementary', { name: 'Inspector' }).getByRole('radiogroup', { name: 'Icon pack' });
+  // Exactly the packs this deploy serves: the private macOS pack shows up only where it is installed.
+  await expect(packs.getByRole('radio')).toHaveCount(manifest.packs.length);
+  await expect(packs.getByRole('radio', { checked: true })).toHaveCount(1);
+
+  await packs.getByRole('radio', { name: 'Outline' }).click();
+  await expect(packs.getByRole('radio', { name: 'Outline' })).toHaveAttribute('aria-checked', 'true');
+  const icon = desktopIcon(page, 'Project One').locator('img');
+  await expect(icon).toHaveAttribute('src', '/icons/outline/finder.webp');
+  await expect.poll(() => icon.evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+
+  page.once('dialog', (d) => d.accept());
+  await toolbar(page).getByRole('button', { name: 'Publish' }).click();
+  await expect(toolbar(page).getByRole('button', { name: 'Published ✓' })).toBeVisible();
+  const published = await page.evaluate(() => localStorage.getItem('portfolio:localPublished'));
+  expect(published).toContain('"iconPack":"outline"');
+});
+
+test('Style: a saved pack that is not served shows the default pack as chosen', async ({ page }) => {
+  await openEditor(page);
+  const manifest = (await (await page.request.get('/icons/packs.json')).json()) as { default: string; packs: string[] };
+  await page.evaluate(() => {
+    const draft = JSON.parse(localStorage.getItem('portfolio:localDraft')!);
+    const data = draft.data ?? draft;
+    data.site.style = { ...data.site.style, iconPack: 'no-such-pack' };
+    localStorage.setItem('portfolio:localDraft', JSON.stringify(draft));
+  });
+  await page.reload();
+  await expect(toolbar(page)).toBeVisible();
+  await toolbar(page).getByRole('button', { name: 'Site' }).click();
+  const packs = page.getByRole('complementary', { name: 'Inspector' }).getByRole('radiogroup', { name: 'Icon pack' });
+  await expect(packs.getByRole('radio', { checked: true })).toHaveCount(1);
+  await expect(packs.getByRole('radio', { checked: true })).toHaveAccessibleName(manifest.default === 'macos' ? 'macOS' : 'Default');
+});

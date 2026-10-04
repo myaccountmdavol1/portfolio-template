@@ -11,6 +11,7 @@ import { Finale } from '@/components/finale/Finale';
 import { useFinale } from '@/components/finale/useFinale';
 import { AppIcon } from '@/components/AppIcon';
 import { startFinale } from '@/lib/gameEvents';
+import { IconPackContext } from '@/components/IconPackContext';
 import { SiteContext } from '@/components/SiteContext';
 import { SiteFonts } from '@/components/SiteFonts';
 import { siteFontVars } from '@/lib/fonts';
@@ -260,6 +261,7 @@ export function Desktop({ data, linkSync = false }: { data: SiteData; linkSync?:
 
   return (
     <SiteContext.Provider value={{ data, openApp, openTarget, variant: 'desktop' }}>
+    <IconPackContext.Provider value={site.style?.iconPack}>
     <div
       data-layout="desktop"
       data-theme={appearance.dark ? 'dark' : 'light'}
@@ -481,6 +483,7 @@ export function Desktop({ data, linkSync = false }: { data: SiteData; linkSync?:
         <LockScreen data={data} dark={appearance.dark} unlocking={saver.phase === 'unlocking'} isolateKeys={!saver.preview} onUnlock={saver.unlock} />
       )}
     </div>
+    </IconPackContext.Provider>
     </SiteContext.Provider>
   );
 }

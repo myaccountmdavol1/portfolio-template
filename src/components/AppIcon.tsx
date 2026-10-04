@@ -1,4 +1,8 @@
+'use client';
+
+import type { SyntheticEvent } from 'react';
 import Image from 'next/image';
+import { useIconPack } from '@/components/IconPackContext';
 import {
   Award,
   ChartColumn,
@@ -12,7 +16,7 @@ import {
   User,
   type LucideIcon,
 } from 'lucide-react';
-import { catalogIconUrl } from '@/lib/iconCatalog';
+import { catalogIconUrl, packIconUrl } from '@/lib/iconCatalog';
 import type { BuiltinIconName, IconSpec } from '@/lib/types';
 
 const GLYPHS: Record<BuiltinIconName, LucideIcon> = {
@@ -54,11 +58,22 @@ export interface AppIconProps {
   accent?: string;
 }
 
+/** If a pack-rewritten icon fails to load (a pack this deploy doesn't serve, or one without the slug), revert once to the original URL. */
+function revertOnError(original: string) {
+  return (e: SyntheticEvent<HTMLImageElement>) => {
+    if (e.currentTarget.src.endsWith(original)) return;
+    e.currentTarget.srcset = ''; // next/image sets srcset, which would otherwise win over src
+    e.currentTarget.src = original;
+  };
+}
+
 export function AppIcon({ icon, size, variant, accent = '#6f9bd1' }: AppIconProps) {
+  const pack = useIconPack();
   if (icon.kind === 'image') {
     return (
       <Image
-        src={icon.url}
+        src={packIconUrl(icon.url, pack)}
+        onError={packIconUrl(icon.url, pack) === icon.url ? undefined : revertOnError(icon.url)}
         alt=""
         aria-hidden
         draggable={false}
@@ -73,7 +88,8 @@ export function AppIcon({ icon, size, variant, accent = '#6f9bd1' }: AppIconProp
   if (icon.kind === 'catalog') {
     return (
       <img
-        src={catalogIconUrl(icon.slug)}
+        src={catalogIconUrl(icon.slug, pack)}
+        onError={pack ? revertOnError(catalogIconUrl(icon.slug)) : undefined}
         alt=""
         aria-hidden
         draggable={false}

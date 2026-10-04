@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { installPack, resolvePack } from './iconPacks';
+import { installPack, resolvePack, servedPacks } from './iconPacks';
 
 describe('resolvePack', () => {
   it('uses the requested pack when it exists', () => {
@@ -20,20 +20,49 @@ describe('resolvePack', () => {
   });
 });
 
-describe('installPack', () => {
-  it('replaces the public catalog with the chosen pack', () => {
-    const root = mkdtempSync(join(tmpdir(), 'packs-'));
-    const packs = join(root, 'icon-packs');
-    const pub = join(root, 'public/icons/catalog');
-    mkdirSync(join(packs, 'default'), { recursive: true });
-    mkdirSync(join(packs, 'macos'), { recursive: true });
-    writeFileSync(join(packs, 'default/mail.png'), 'd');
-    writeFileSync(join(packs, 'macos/mail.png'), 'm');
-    writeFileSync(join(packs, 'macos/mail.webp'), 'm');
-    mkdirSync(pub, { recursive: true });
-    writeFileSync(join(pub, 'stale.png'), 'old');
+describe('servedPacks', () => {
+  it('serves every pack, and the private macOS pack only when it was chosen', () => {
+    expect(servedPacks(['default', 'glass', 'macos'], 'default')).toEqual(['default', 'glass']);
+    expect(servedPacks(['default', 'glass', 'macos'], 'macos')).toEqual(['default', 'glass', 'macos']);
+    expect(servedPacks(['default', 'my-pack'], 'default')).toEqual(['default', 'my-pack']);
+  });
+});
 
-    expect(installPack(packs, pub, 'macos')).toEqual({ pack: 'macos', files: 2 });
-    expect(readdirSync(pub).sort()).toEqual(['mail.png', 'mail.webp']);
+function fixture() {
+  const root = mkdtempSync(join(tmpdir(), 'packs-'));
+  const packs = join(root, 'icon-packs');
+  for (const [pack, body] of [
+    ['default', 'd'],
+    ['glass', 'g'],
+    ['macos', 'm'],
+  ]) {
+    mkdirSync(join(packs, pack), { recursive: true });
+    writeFileSync(join(packs, pack, 'mail.png'), body);
+    writeFileSync(join(packs, pack, 'mail.webp'), body);
+  }
+  const icons = join(root, 'public/icons');
+  mkdirSync(join(icons, 'catalog'), { recursive: true });
+  writeFileSync(join(icons, 'catalog/stale.png'), 'old');
+  return { packs, icons };
+}
+
+describe('installPack', () => {
+  it('serves the chosen pack at /icons/catalog, every pack by name, and a manifest', () => {
+    const { packs, icons } = fixture();
+    expect(installPack(packs, icons, 'macos')).toEqual({ pack: 'macos', packs: ['default', 'glass', 'macos'], files: 2 });
+    // replaces the old catalog: the stale file is gone
+    expect(readdirSync(join(icons, 'catalog')).sort()).toEqual(['mail.png', 'mail.webp']);
+    expect(readFileSync(join(icons, 'catalog/mail.png'), 'utf8')).toBe('m');
+    expect(readFileSync(join(icons, 'glass/mail.webp'), 'utf8')).toBe('g');
+    expect(readdirSync(icons).sort()).toEqual(['catalog', 'default', 'glass', 'macos', 'packs.json']);
+    expect(JSON.parse(readFileSync(join(icons, 'packs.json'), 'utf8'))).toEqual({ default: 'macos', packs: ['default', 'glass', 'macos'] });
+  });
+
+  it('keeps the private macOS pack off a site that did not choose it', () => {
+    const { packs, icons } = fixture();
+    expect(installPack(packs, icons, undefined)).toEqual({ pack: 'default', packs: ['default', 'glass'], files: 2 });
+    expect(existsSync(join(icons, 'macos'))).toBe(false);
+    expect(readFileSync(join(icons, 'catalog/mail.png'), 'utf8')).toBe('d');
+    expect(JSON.parse(readFileSync(join(icons, 'packs.json'), 'utf8'))).toEqual({ default: 'default', packs: ['default', 'glass'] });
   });
 });

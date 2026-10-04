@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useIconPack } from '@/components/IconPackContext';
 import { catalogIconUrl, CATALOG_CATEGORIES, filterIcons, type CatalogCategory } from '@/lib/iconCatalog';
 import type { IconSpec } from '@/lib/types';
 import { Modal, modalButton } from './Modal';
@@ -13,6 +14,7 @@ interface IconPickerProps {
 }
 
 export function IconPicker({ current, onPick, onClose }: IconPickerProps) {
+  const pack = useIconPack();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CatalogCategory | 'all'>('all');
   const icons = filterIcons(query, category);
@@ -82,7 +84,7 @@ export function IconPicker({ current, onPick, onClose }: IconPickerProps) {
                   className="flex cursor-pointer flex-col items-center gap-1 rounded-lg p-1.5 hover:bg-black/5 aria-pressed:bg-[#0a84ff]/15"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- small static catalog PNGs */}
-                  <img src={catalogIconUrl(icon.slug)} alt="" width={48} height={48} loading="lazy" className="h-12 w-12 object-contain" />
+                  <img src={catalogIconUrl(icon.slug, pack)} alt="" width={48} height={48} loading="lazy" className="h-12 w-12 object-contain" />
                   <span className="w-full truncate text-center text-[10px] text-[#6b675f]">{icon.label}</span>
                 </button>
               );

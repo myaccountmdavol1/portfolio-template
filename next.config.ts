@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@electric-sql/pglite'],
   // PGLITE_DIR is for local development and tests only. Keep PGlite's ~21 MB dist out of every deployed function's file trace.
   outputFileTracingExcludes: { '/*': ['node_modules/@electric-sql/pglite/**'] },
+  // /api/og reads icon PNGs from public/icons/<pack>/ (copied there by npm run icons:install before the build).
+  outputFileTracingIncludes: { '/api/og': ['./public/icons/**/*.png'] },
   // The editor's sign-in page lives at /admin; /edit and /login are easy-to-guess aliases.
   redirects() {
     return [

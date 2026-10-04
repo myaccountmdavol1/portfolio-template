@@ -15,6 +15,7 @@ export default async function NotFound() {
       imageUrl={settings.imageUrl}
       game={settings.game !== false}
       lostAndFound={secretAchievements(data).some((a) => a.id === 'lost')}
+      iconPack={site.style?.iconPack}
     />
   );
 }

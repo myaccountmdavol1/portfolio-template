@@ -31,6 +31,7 @@ import { isInPhoneDock, movePhoneItem, resetPhoneLayout, setPhoneWidgetSize } fr
 import { PHONE_DOCK_MAX } from '@/lib/phoneLayout';
 import { APP_TYPE_LABELS, APP_TYPES, newAppId } from '@/lib/editor/starters';
 import type { AppType, IconSpec, SiteData } from '@/lib/types';
+import { IconPackContext } from '@/components/IconPackContext';
 import { ContextMenu } from './ContextMenu';
 import { EditorContext, requestCleanUp, type EditorApi, type IconTarget, type MenuRequest, type Selection } from './EditorContext';
 import { EditorToolbar, toolbarButton, type Preview } from './EditorToolbar';
@@ -321,7 +322,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
   const site = preview === 'phone' ? <Phone data={shown} framed={framed} /> : <Desktop data={shown} />;
 
   return (
-    <>
+    <IconPackContext.Provider value={data.site.style?.iconPack}>
       <div
         data-testid="editor-stage"
         className="fixed inset-y-0 left-0 overflow-hidden"
@@ -474,6 +475,6 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
           }}
         />
       )}
-    </>
+    </IconPackContext.Provider>
   );
 }
