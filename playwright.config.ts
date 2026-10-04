@@ -89,6 +89,7 @@ export default defineConfig({
         DATABASE_URL: '',
         POSTGRES_URL: '',
         BLOB_READ_WRITE_TOKEN: '',
+        BLOB_STORE_ID: '',
       },
       reuseExistingServer: false,
       timeout: 120_000,

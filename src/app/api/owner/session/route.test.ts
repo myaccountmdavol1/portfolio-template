@@ -23,6 +23,7 @@ const cookieOf = (res: Response) => res.headers.get('set-cookie')?.split(';')[0]
 beforeEach(async () => {
   vi.stubEnv('SETUP_CODE', 'route-setup-code');
   vi.stubEnv('BLOB_READ_WRITE_TOKEN', '');
+  vi.stubEnv('BLOB_STORE_ID', '');
   vi.stubEnv('MEDIA_DIR', '/tmp/portfolio-media-test');
   h.store = postgresStore(sql);
   await ensureSchema(sql);
@@ -40,6 +41,14 @@ describe('owner session routes', () => {
       expect(await r.json()).toEqual({ error: 'Not available on this site.' });
       expect(r.headers.get('set-cookie')).toBeNull();
     }
+  });
+
+  it('report which Blob upload style the site uses', async () => {
+    const media = async () => ((await (await session.GET(new Request('http://localhost/api/owner/session'))).json()) as { media: unknown }).media;
+    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'vercel_blob_rw_test');
+    expect(await media()).toBe('blob');
+    vi.stubEnv('BLOB_STORE_ID', 'store_abc');
+    expect(await media()).toBe('blob-presigned');
   });
 
   it('report an unclaimed site, then claim it and sign in with the cookie', async () => {

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 export type PasswordSession =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; configured: boolean; setupCodeTooShort: boolean; claimed: boolean; owner: boolean; media: 'blob' | 'disk' | null };
+  | { status: 'ready'; configured: boolean; setupCodeTooShort: boolean; claimed: boolean; owner: boolean; media: 'blob' | 'blob-presigned' | 'disk' | null };
 
 type Ready = Extract<PasswordSession, { status: 'ready' }>;
 

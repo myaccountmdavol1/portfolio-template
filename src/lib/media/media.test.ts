@@ -75,4 +75,19 @@ describe('getMedia', () => {
     expect(getMedia({ MEDIA_DIR: '/tmp/m', NODE_ENV: 'production' })).toBeNull();
     expect(getMedia({ NODE_ENV: 'development' })).toBeNull();
   });
+
+  it('uses Blob for a store-ID (OIDC) store, reporting the presigned style', () => {
+    expect(getMedia({ BLOB_STORE_ID: 'store_abc', NODE_ENV: 'production' })?.kind).toBe('blob-presigned');
+    expect(getMedia({ BLOB_STORE_ID: 'store_abc', MEDIA_DIR: '/tmp/m', NODE_ENV: 'development' })?.kind).toBe('blob-presigned');
+    expect(getMedia({ BLOB_STORE_ID: 'store_abc', BLOB_READ_WRITE_TOKEN: 't', NODE_ENV: 'production' })?.kind).toBe('blob-presigned');
+  });
+
+  it('lists and deletes through Blob in the presigned style too', async () => {
+    blobApi.list.mockResolvedValueOnce({ blobs: [] });
+    const media = getMedia({ BLOB_STORE_ID: 'store_abc', NODE_ENV: 'production' })!;
+    await expect(media.list('docs')).resolves.toEqual([]);
+    expect(blobApi.list).toHaveBeenLastCalledWith({ prefix: 'docs/', limit: 1000 });
+    await media.remove('docs/1-a.pdf');
+    expect(blobApi.del).toHaveBeenLastCalledWith('docs/1-a.pdf');
+  });
 });

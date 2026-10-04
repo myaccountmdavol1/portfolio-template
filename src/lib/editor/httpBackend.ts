@@ -10,17 +10,25 @@ export class SignedOutError extends Error {}
 
 export interface HttpBackendOptions {
   /** How uploads are stored, from GET /api/owner/session. null: this site has no file storage. */
-  media: 'blob' | 'disk' | null;
+  media: 'blob' | 'blob-presigned' | 'disk' | null;
   /** Called on every 401, e.g. to send the owner back to /admin (unsaved edits stay in the local mirror). */
   onUnauthorized: () => void;
   fetch?: typeof fetch;
   uploadToBlob?: (pathname: string, file: File) => Promise<string>;
+  uploadToBlobPresigned?: (pathname: string, file: File) => Promise<string>;
   now?: () => number;
 }
 
 async function uploadToVercelBlob(pathname: string, file: File): Promise<string> {
   const { upload } = await import('@vercel/blob/client');
   const blob = await upload(pathname, file, { access: 'public', handleUploadUrl: '/api/owner/upload', contentType: file.type || undefined });
+  return blob.url;
+}
+
+/** For a store linked by BLOB_STORE_ID: the route hands back a presigned URL instead of a client token. */
+async function uploadToVercelBlobPresigned(pathname: string, file: File): Promise<string> {
+  const { uploadPresigned } = await import('@vercel/blob/client');
+  const blob = await uploadPresigned(pathname, file, { access: 'public', handleUploadUrl: '/api/owner/upload', contentType: file.type || undefined });
   return blob.url;
 }
 
@@ -56,6 +64,7 @@ export function createHttpBackend(options: HttpBackendOptions): EditorBackend {
     async upload(file, folder) {
       const path = storagePath(folder, file.name, now());
       if (options.media === 'blob') return (options.uploadToBlob ?? uploadToVercelBlob)(path, file);
+      if (options.media === 'blob-presigned') return (options.uploadToBlobPresigned ?? uploadToVercelBlobPresigned)(path, file);
       if (options.media !== 'disk') throw new Error('File storage isn’t set up on this site.');
       const form = new FormData();
       form.set('path', path);

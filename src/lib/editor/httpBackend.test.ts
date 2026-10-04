@@ -59,6 +59,12 @@ describe('HTTP editor backend', () => {
     const blob = createHttpBackend({ media: 'blob', onUnauthorized: () => {}, fetch, uploadToBlob, now: () => 2 });
     await expect(blob.upload(file, 'images')).resolves.toBe('https://x.public.blob.vercel-storage.com/images/2-photo.png');
 
+    const uploadToBlobPresigned = vi.fn(async (pathname: string) => `https://y.public.blob.vercel-storage.com/${pathname}`);
+    const presigned = createHttpBackend({ media: 'blob-presigned', onUnauthorized: () => {}, fetch, uploadToBlob, uploadToBlobPresigned, now: () => 3 });
+    await expect(presigned.upload(file, 'images')).resolves.toBe('https://y.public.blob.vercel-storage.com/images/3-photo.png');
+    expect(uploadToBlobPresigned).toHaveBeenCalledWith('images/3-photo.png', file);
+    expect(uploadToBlob).toHaveBeenCalledTimes(1);
+
     const none = createHttpBackend({ media: null, onUnauthorized: () => {}, fetch });
     await expect(none.upload(file, 'images')).rejects.toThrow(/storage/i);
   });

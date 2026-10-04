@@ -2,10 +2,13 @@ import { del, list } from '@vercel/blob';
 import type { UploadFolder } from '../editor/backend';
 import type { MediaStore } from './index';
 
-/** Vercel Blob (BLOB_READ_WRITE_TOKEN). Uploads go straight from the browser; see /api/owner/upload. */
-export function blobMedia(): MediaStore {
+/**
+ * Vercel Blob. list/del find their credentials themselves: OIDC + BLOB_STORE_ID, else BLOB_READ_WRITE_TOKEN.
+ * Uploads go straight from the browser; `kind` says which way (see /api/owner/upload).
+ */
+export function blobMedia(kind: 'blob' | 'blob-presigned' = 'blob'): MediaStore {
   return {
-    kind: 'blob',
+    kind,
     async list(folder: UploadFolder) {
       const { blobs } = await list({ prefix: `${folder}/`, limit: 1000 });
       return blobs
