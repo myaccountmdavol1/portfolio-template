@@ -1,0 +1,47 @@
+[
+  {
+    "file": "mountain-lake.webp",
+    "title": "Rocky Mountain National Park lake reflection",
+    "author": "National Park Service",
+    "source": "https://commons.wikimedia.org/wiki/File:Rocky_Mountain_National_Park_lake_reflection.jpg",
+    "license": "Public Domain",
+    "licenseUrl": "https://www.nps.gov/aboutus/disclaimer.htm",
+    "verifiedOn": "2026-10-04"
+  },
+  {
+    "file": "coastline.webp",
+    "title": "Olympic Coast Sea Stacks",
+    "author": "NPS photo",
+    "source": "https://commons.wikimedia.org/wiki/File:Olympic_Coast_Sea_Stacks_(f24a5a69-155d-4519-3e4d-8113c1a7b030).JPG",
+    "license": "Public Domain",
+    "licenseUrl": "https://www.nps.gov/aboutus/disclaimer.htm",
+    "verifiedOn": "2026-10-04"
+  },
+  {
+    "file": "desert-dunes.webp",
+    "title": "Mojave Preserve Kelso Dunes",
+    "author": "NPS / Kelsey Graczyk (Joshua Tree National Park)",
+    "source": "https://commons.wikimedia.org/wiki/File:Mojave_Preserve_Kelso_Dunes_(49531757693).jpg",
+    "license": "Public Domain",
+    "licenseUrl": "https://www.nps.gov/aboutus/disclaimer.htm",
+    "verifiedOn": "2026-10-04"
+  },
+  {
+    "file": "meadow.webp",
+    "title": "Beagle Gap Meadow",
+    "author": "NPS / M. O’Neill (Shenandoah National Park)",
+    "source": "https://commons.wikimedia.org/wiki/File:Beagle_Gap_Meadow_(51833998376).jpg",
+    "license": "Public Domain",
+    "licenseUrl": "https://www.nps.gov/aboutus/disclaimer.htm",
+    "verifiedOn": "2026-10-04"
+  },
+  {
+    "file": "night-sky.webp",
+    "title": "Milky Way over Big Prairie",
+    "author": "Glacier National Park (NPS)",
+    "source": "https://commons.wikimedia.org/wiki/File:Milky_Way_over_Big_Prairie_(16611194397).jpg",
+    "license": "Public Domain",
+    "licenseUrl": "https://www.nps.gov/aboutus/disclaimer.htm",
+    "verifiedOn": "2026-10-04"
+  }
+]

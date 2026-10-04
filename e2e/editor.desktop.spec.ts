@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { SCENERY, type SceneryPhoto } from '../src/lib/scenery';
 
 // Every editor test uses the dev-only local editor: the draft lives in this test's own localStorage.
 
@@ -1629,4 +1630,52 @@ test('Style: headline and body fonts apply live and are published', async ({ pag
   const published = await page.evaluate(() => localStorage.getItem('portfolio:localPublished'));
   expect(published).toContain('"headingFont":"playfair-display"');
   expect(published).toContain('"bodyFont":"nunito"');
+});
+
+test('the wallpaper picker groups backgrounds, and patterns take a colour', async ({ page }) => {
+  await openEditor(page);
+  const picker = page.getByRole('dialog', { name: 'Wallpaper' });
+  const root = page.locator('[data-layout="desktop"]');
+  await toolbar(page).getByRole('button', { name: 'Wallpaper' }).click();
+  for (const group of ['Gradients & colours', 'Patterns', 'Classroom']) await expect(picker.getByRole('region', { name: group })).toBeVisible();
+
+  await picker.getByRole('region', { name: 'Gradients & colours' }).getByRole('button', { name: 'Midnight' }).click();
+  await expect(picker).toHaveCount(0);
+  await expect(root).toHaveAttribute('data-wallpaper', 'midnight');
+  await expect(root).toHaveCSS('color', 'rgb(242, 239, 233)');
+
+  await toolbar(page).getByRole('button', { name: 'Wallpaper' }).click();
+  await picker.getByRole('region', { name: 'Patterns' }).getByRole('button', { name: 'Dots' }).click();
+  await expect(root).toHaveAttribute('data-wallpaper', 'dots');
+  await expect(picker).toBeVisible(); // a pattern keeps the picker open for its colour
+  const colours = picker.getByRole('radiogroup', { name: 'Pattern colour' });
+  await expect(colours.getByRole('radio', { name: 'Blue' })).toHaveAttribute('aria-checked', 'true');
+  await colours.getByRole('radio', { name: 'Pink' }).click();
+  await expect(colours.getByRole('radio', { name: 'Pink' })).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(() => root.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('rgba(255, 55, 95');
+  await page.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+
+  page.once('dialog', (d) => d.accept());
+  await toolbar(page).getByRole('button', { name: 'Publish' }).click();
+  await expect(toolbar(page).getByRole('button', { name: 'Published ✓' })).toBeVisible();
+  const published = await page.evaluate(() => localStorage.getItem('portfolio:localPublished'));
+  expect(published).toContain('"wallpaper":{"kind":"preset","preset":"dots","color":"#ff375f"}');
+});
+
+test('scenery photos are offered in the picker and load', async ({ page }) => {
+  const photos = SCENERY as readonly SceneryPhoto[];
+  test.skip(photos.length === 0, 'No scenery photos shipped');
+  await openEditor(page);
+  await toolbar(page).getByRole('button', { name: 'Wallpaper' }).click();
+  const scenery = page.getByRole('dialog', { name: 'Wallpaper' }).getByRole('region', { name: 'Scenery' });
+  await expect(scenery.getByRole('button')).toHaveCount(photos.length);
+  await scenery.getByRole('button', { name: photos[0].label }).click();
+  const root = page.locator('[data-layout="desktop"]');
+  await expect(root).toHaveAttribute('data-wallpaper', photos[0].id);
+  await expect.poll(() => root.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain(`/wallpapers/${photos[0].id}.webp`);
+  for (const p of photos) {
+    expect((await page.request.get(`/wallpapers/${p.id}.webp`)).status(), p.id).toBe(200);
+    expect((await page.request.get(`/wallpapers/${p.id}-thumb.webp`)).status(), p.id).toBe(200);
+  }
 });

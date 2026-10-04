@@ -442,9 +442,10 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
             <WallpaperPicker
               current={data.site.wallpaper}
               onClose={() => setPicker(null)}
-              onPick={(wallpaper) => {
-                apply((d) => updateSite(d, { wallpaper }));
-                setPicker(null);
+              onPick={(wallpaper, keepOpen) => {
+                // A pattern and the colours tried after it are one undo step; the picker stays open for the colour.
+                apply((d) => updateSite(d, { wallpaper }), keepOpen && wallpaper.kind === 'preset' ? `site:wallpaper:pattern:${wallpaper.preset}` : undefined);
+                if (!keepOpen) setPicker(null);
               }}
             />
           )}

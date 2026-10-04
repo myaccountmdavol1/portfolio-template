@@ -1,5 +1,7 @@
 // All data shapes for the portfolio. Firestore documents (Plan 2) use exactly these shapes.
 
+import type { SceneryId } from './scenery';
+
 export type AppType = 'project' | 'document' | 'about' | 'link' | 'credentials' | 'stats' | 'note' | 'clock' | 'status' | 'messages' | 'guestbook' | 'freeform' | 'terminal' | 'photos' | 'maps' | 'calendar' | 'voicememos' | 'gamecenter' | 'mail' | 'facetime' | 'wallet' | 'social' | 'phone';
 
 /** Types shown as draggable widgets on the desktop (and 2×2 widgets on the phone) rather than icons. */
@@ -447,7 +449,35 @@ export type PortfolioApp =
   | SocialApp
   | PhoneApp;
 
-export type WallpaperPreset = 'sky' | 'paper' | 'grid' | 'dusk';
+/** Recolourable patterns: the wallpaper's `color` tints them. */
+export type WallpaperPattern = 'dots' | 'stripes' | 'checks' | 'waves' | 'confetti' | 'zigzag';
+
+/** Built-in wallpapers (src/lib/wallpaper.ts). The first four are the originals. */
+export type WallpaperPreset =
+  | 'sky'
+  | 'paper'
+  | 'grid'
+  | 'dusk'
+  // gradients & colours
+  | 'sunrise'
+  | 'mint'
+  | 'lavender'
+  | 'lemon'
+  | 'blush'
+  | 'midnight'
+  | 'aurora'
+  | 'evergreen'
+  | 'ember'
+  | 'graphite'
+  | WallpaperPattern
+  // classroom
+  | 'chalkboard'
+  | 'notebook'
+  | 'corkboard'
+  | 'blueprint'
+  | 'whiteboard'
+  // photos in public/wallpapers
+  | SceneryId;
 
 /** action strings: "openApp:<appId>" or "url:<href>" (href may be https:, mailto:, tel:, sms:) */
 /** Built-in pieces of the desktop menu bar that the owner can switch off. */
@@ -525,7 +555,8 @@ export interface SiteSettings {
   /** `showOnPhone`: also draw it behind the phone home screen (missing = off). */
   headline: { show: boolean; showOnPhone?: boolean; line1: string; line2: string; style?: HeadlineStyle };
   /** For images, `tone` is how bright the picture is (measured on upload; missing = treat as dark → white text). */
-  wallpaper: { kind: 'preset'; preset: WallpaperPreset } | { kind: 'image'; imageUrl: string; tone?: 'light' | 'dark' };
+  /** `color` tints a pattern preset (a #rrggbb hex; missing = the pattern's own colour). */
+  wallpaper: { kind: 'preset'; preset: WallpaperPreset; color?: string } | { kind: 'image'; imageUrl: string; tone?: 'light' | 'dark' };
   accent: string; // hex colour
   /** Fonts picked in Site settings → Style. Missing = Instrument Serif headline, Geist body. */
   style?: SiteStyle;
