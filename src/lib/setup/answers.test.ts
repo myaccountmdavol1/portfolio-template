@@ -10,6 +10,7 @@ import {
   resumeAnswers,
   previousStep,
   PROGRESS_STEPS,
+  progressSteps,
   resumeStep,
   saveWizard,
   SETUP_WIZARD_KEY,
@@ -17,6 +18,7 @@ import {
   withName,
   withTitle,
   WIZARD_STEPS,
+  wizardSteps,
   type SavedWizard,
 } from './answers';
 
@@ -49,19 +51,31 @@ const sample: SavedWizard = {
 
 describe('wizard steps', () => {
   it('run from Welcome to Your site is live, with progress dots for the questions and Review', () => {
-    expect(WIZARD_STEPS).toEqual(['welcome', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review', 'publish', 'live']);
-    expect(PROGRESS_STEPS.map((p) => p.step)).toEqual(['you', 'photo', 'headline', 'wallpaper', 'style', 'review']);
-    expect(nextStep('welcome')).toBe('you');
-    expect(nextStep('style')).toBe('review');
-    expect(nextStep('live')).toBe('live');
-    expect(previousStep('you')).toBe('welcome');
-    expect(previousStep('welcome')).toBe('welcome');
+    expect(WIZARD_STEPS).toEqual(['welcome', 'kit', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review', 'publish', 'live']);
+    expect(PROGRESS_STEPS.map((p) => p.step)).toEqual(['kit', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review']);
+    expect(nextStep('style', true)).toBe('review');
+    expect(nextStep('live', true)).toBe('live');
+    expect(previousStep('welcome', true)).toBe('welcome');
   });
 
-  it('resume at Review rather than mid-publish or after it', () => {
-    expect(resumeStep('publish')).toBe('review');
-    expect(resumeStep('live')).toBe('review');
-    expect(resumeStep('photo')).toBe('photo');
+  it('ask what describes the owner right after Welcome, only while kits are offered', () => {
+    expect(wizardSteps(true)).toEqual(WIZARD_STEPS);
+    expect(wizardSteps(false)).toEqual(['welcome', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review', 'publish', 'live']);
+    expect(progressSteps(true)).toHaveLength(7);
+    expect(progressSteps(false).map((p) => p.step)).toEqual(['you', 'photo', 'headline', 'wallpaper', 'style', 'review']);
+    expect(nextStep('welcome', true)).toBe('kit');
+    expect(nextStep('kit', true)).toBe('you');
+    expect(previousStep('you', true)).toBe('kit');
+    expect(nextStep('welcome', false)).toBe('you');
+    expect(previousStep('you', false)).toBe('welcome');
+  });
+
+  it('resume at Review rather than mid-publish or after it, and past a kit question no longer asked', () => {
+    expect(resumeStep('publish', true)).toBe('review');
+    expect(resumeStep('live', false)).toBe('review');
+    expect(resumeStep('photo', false)).toBe('photo');
+    expect(resumeStep('kit', true)).toBe('kit');
+    expect(resumeStep('kit', false)).toBe('you');
   });
 });
 
@@ -116,6 +130,15 @@ describe('saved answers', () => {
     void _unused;
     const parsed = parseSavedWizard(JSON.stringify({ ...sample, answers: old }));
     expect(parsed?.answers.headlineEdited).toBe(false);
+  });
+
+  it('keep a known kit, and drop an unknown or missing one', () => {
+    const withKitId = (kit: unknown) => JSON.stringify({ ...sample, step: 'kit', answers: { ...sample.answers, kit } });
+    expect(parseSavedWizard(withKitId('teacher'))).toEqual({ step: 'kit', answers: { ...sample.answers, kit: 'teacher' } });
+    expect(parseSavedWizard(withKitId('astronaut'))).toEqual({ step: 'kit', answers: sample.answers });
+    expect(parseSavedWizard(withKitId(3))?.answers).not.toHaveProperty('kit');
+    // Saved before kits existed.
+    expect(parseSavedWizard(JSON.stringify(sample))?.answers).not.toHaveProperty('kit');
   });
 
   it('round-trip through browser storage, and clear', () => {

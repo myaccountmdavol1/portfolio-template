@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { seedSiteData } from '../../src/lib/seed';
 
 // Runs against the third dev server (playwright.config.ts): Vercel backend on PGlite, a local media folder,
 // SETUP_CODE=e2e-setup-code and a fresh database every run. One journey, because each step needs the last.
@@ -37,7 +38,7 @@ test('visitors who open /setup are sent to sign in', async ({ page }) => {
   await page.waitForURL('**/admin');
 });
 
-test('owner journey: claim, edit, publish, upload, sign out and in, reset the password', async ({ page, browser }) => {
+test('owner journey: claim, edit, publish, upload, sign out and in, reset the password, set up, start from a kit', async ({ page, browser }) => {
   test.setTimeout(300_000);
 
   await test.step('the home page of a new site invites the owner to claim it', async () => {
@@ -64,6 +65,8 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     // A new owner goes straight to the setup wizard; Skip for now opens the editor without finishing it.
     await page.waitForURL('**/setup');
     await expect(page.getByRole('heading', { name: 'Let\u2019s set up your site' })).toBeVisible();
+    // A new deploy is still the sample, so the wizard will ask what describes the owner.
+    await expect(page.getByText('A few quick questions \u2014 what describes you,', { exact: false })).toBeVisible();
     await page.getByRole('link', { name: 'Skip for now' }).click();
     await page.waitForURL(/\/\?edit=1$/);
   });
@@ -205,6 +208,7 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     await expect(page.getByRole('heading', { name: 'Let\u2019s set up your site' })).toBeVisible();
     await page.getByRole('button', { name: 'Let\u2019s go' }).click();
 
+    // The site was edited before the wizard, so it skips the kit question: straight to About you, one step fewer.
     await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
     await expect(page.getByRole('list', { name: 'Setup progress' }).getByRole('listitem')).toHaveCount(6);
     await page.getByLabel('Your name').fill('Sam Taylor');
@@ -245,6 +249,7 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     for (const text of ['Sam Taylor', 'Sam Taylor \u2014 Portfolio', 'New photo', 'welcome to my studio.', 'Dusk', 'Lora headline, Inter text, Glass icons']) {
       await expect(summary).toContainText(text);
     }
+    await expect(summary).not.toContainText('Starting point');
     // Edit goes back to that step, and comes straight back to Review.
     await page.getByRole('button', { name: 'Edit Bio' }).click();
     await expect(page.getByRole('heading', { name: 'Headline & bio' })).toBeVisible();
@@ -329,5 +334,113 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     await expect(page.getByText('You’re signed in as the owner.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open the editor' })).toBeVisible();
     await expect(page).toHaveURL(/\/admin$/);
+  });
+
+  await test.step('a site that is still the sample starts from a kit: Teacher, published, and a visitor sees it', async () => {
+    // A new deploy's draft is the template sample. Put it back through the owner API (no sign-in attempt), so the
+    // wizard offers the kits again; the published site is still Sam Taylor's from the last step.
+    expect((await page.request.put('/api/owner/draft', { data: { next: seedSiteData, prev: null } })).status()).toBe(200);
+    await page.goto('/setup');
+    await expect(page.getByRole('heading', { name: 'Let\u2019s set up your site' })).toBeVisible();
+    await page.getByRole('button', { name: 'Let\u2019s go' }).click();
+
+    await expect(page.getByRole('heading', { name: 'What best describes you?' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Setup progress' }).getByRole('listitem')).toHaveCount(7);
+    const kits = page.getByRole('radiogroup', { name: 'Starting point' });
+    await expect(kits.getByRole('radio')).toHaveCount(5);
+    // Nothing picked yet keeps the sample, which is Classic.
+    await expect(kits.getByRole('radio', { name: 'Classic' })).toHaveAttribute('aria-checked', 'true');
+    await kits.getByRole('radio', { name: 'Teacher' }).click();
+    await expect(kits.getByRole('radio', { name: 'Teacher' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('setup-preview')).toHaveAttribute('data-wallpaper', 'chalkboard');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await expect(page.getByRole('heading', { name: 'About you' })).toBeVisible();
+    await page.getByLabel('Your name').fill('Sam Taylor');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Your photo' })).toBeVisible();
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Headline & bio' })).toBeVisible();
+    await expect(page.getByLabel('Headline, second line')).toHaveValue('classroom.');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // The Wallpaper and Style steps start on Teacher's look.
+    await expect(page.getByRole('heading', { name: 'Wallpaper', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Chalkboard', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Pick your style' })).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: 'Headline font' }).getByRole('radio', { name: 'Patrick Hand', exact: true })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radiogroup', { name: 'Body font' }).getByRole('radio', { name: 'Nunito', exact: true })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radiogroup', { name: 'Icon pack' }).getByRole('radio', { name: 'Pastel', exact: true })).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
+    const summary = page.locator('main dl');
+    for (const text of ['Starting point', 'Teacher', 'Sam Taylor', 'welcome to my classroom.', 'Chalkboard', 'Patrick Hand headline, Nunito text, Pastel icons']) {
+      await expect(summary).toContainText(text);
+    }
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Your site is live' })).toBeVisible({ timeout: 20_000 });
+
+    const visitor = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const v = await visitor.newPage();
+    await v.goto('/');
+    await expect(v.getByText('Sam Taylor\u2019s Portfolio')).toBeVisible();
+    await expect(v.getByTestId('headline')).toContainText('classroom.');
+    await expect(v.getByTestId('headline')).toHaveCSS('font-family', /Patrick Hand/);
+    await expect(v.locator('[data-layout="desktop"]')).toHaveCSS('font-family', /Nunito/);
+    await expect(v.locator('[data-layout="desktop"]')).toHaveAttribute('data-wallpaper', 'chalkboard');
+    await expect(desktopIcon(v, 'Our classroom').locator('img')).toHaveAttribute('src', '/icons/pastel/photos.webp');
+    await expect(desktopIcon(v, 'Office hours')).toBeVisible();
+    await expect(desktopIcon(v, 'Project Two')).toHaveCount(0);
+    const card = await v.request.get('/kits/teacher-classroom-1.svg');
+    expect(card.status()).toBe(200);
+    expect(card.headers()['content-type']).toContain('image/svg+xml');
+    await visitor.close();
+  });
+
+  await test.step('run setup again from the editor: Keep my current site by default, a warning on any kit, and the apps stay', async () => {
+    await page.goto('/?edit=1');
+    await toolbar(page).getByRole('button', { name: 'More' }).click();
+    await page.getByRole('menuitem', { name: 'Run setup again\u2026' }).click();
+    await page.waitForURL('**/setup?again=1');
+    // A re-run opens straight on the kit question, with the current site first and picked.
+    await expect(page.getByRole('heading', { name: 'What best describes you?' })).toBeVisible();
+    const kits = page.getByRole('radiogroup', { name: 'Starting point' });
+    await expect(kits.getByRole('radio')).toHaveCount(6);
+    await expect(kits.getByRole('radio').first()).toHaveAccessibleName('Keep my current site');
+    await expect(kits.getByRole('radio', { name: 'Keep my current site' })).toHaveAttribute('aria-checked', 'true');
+    const WARNING = 'Picking a kit replaces your apps and their content. Published versions can be restored from version history; changes you haven\u2019t published can\u2019t.';
+    await expect(page.getByText(WARNING)).toHaveCount(0);
+    await kits.getByRole('radio', { name: 'Professional' }).click();
+    await expect(kits.getByRole('radio', { name: 'Professional' })).toContainText(WARNING);
+
+    for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByRole('heading', { name: 'Review' })).toBeVisible();
+    const summary = page.locator('main dl');
+    await expect(summary).toContainText('Professional');
+    await expect(summary).toContainText(WARNING);
+    // Back to the kit step: keep the current site after all.
+    await page.getByRole('button', { name: 'Edit Starting point' }).click();
+    await kits.getByRole('radio', { name: 'Keep my current site' }).click();
+    await expect(page.getByText(WARNING)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Back to review' }).click();
+    await expect(summary).toContainText('Keep my current site');
+    await expect(summary).not.toContainText(WARNING);
+
+    await page.getByRole('button', { name: 'Publish', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Your site is live' })).toBeVisible({ timeout: 20_000 });
+    // Setup stays finished, and the editor tour isn't offered again.
+    await expect(page.getByRole('link', { name: 'Start editing' })).toHaveAttribute('href', '/?edit=1');
+    expect(((await (await page.request.get('/api/owner/session')).json()) as { setupDone: boolean }).setupDone).toBe(true);
+
+    const visitor = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const v = await visitor.newPage();
+    await v.goto('/');
+    await expect(v.getByText('Sam Taylor\u2019s Portfolio')).toBeVisible();
+    await expect(desktopIcon(v, 'Our classroom')).toBeVisible();
+    await expect(desktopIcon(v, 'Case Study One')).toHaveCount(0);
+    await expect(v.locator('[data-layout="desktop"]')).toHaveAttribute('data-wallpaper', 'chalkboard');
+    await visitor.close();
   });
 });

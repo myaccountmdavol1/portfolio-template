@@ -10,6 +10,7 @@ import { catalogIconUrl } from '@/lib/iconCatalog';
 import { appMenuEntries, dockMenuEntries, phoneMenuEntries, sizeFromAction, type AppAction, type DockAction } from '@/lib/editor/appMenu';
 import type { EditorBackend, UploadFolder } from '@/lib/editor/backend';
 import { startsInEditMode } from '@/lib/editor/gate';
+import { moreMenuEntries } from '@/lib/editor/moreMenu';
 import {
   addApp,
   addDockLink,
@@ -123,13 +124,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
 
   const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const closeMoreMenu = useCallback(() => setMoreMenu(null), []);
-  const moreItems = [
-    { id: 'cleanUp', label: 'Clean Up Desktop Icons' },
-    { id: 'media', label: 'Media library…' },
-    { id: 'versions', label: 'Version history…' },
-    { id: 'discard', label: 'Discard draft changes…', danger: true },
-    { id: 'leave', label: onSignOut ? 'Sign out' : 'Leave the editor' },
-  ];
+  const moreItems = moreMenuEntries(backend.kind, onSignOut !== null);
   function pickMore(id: string) {
     if (id === 'cleanUp') {
       setPreview('desktop');
@@ -137,6 +132,8 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
     }
     if (id === 'versions') setPicker({ kind: 'versions' });
     if (id === 'media') setPicker({ kind: 'media' });
+    // The wizard starts from the unsaved mirror, else the draft, so nothing typed here is lost.
+    if (id === 'setup') router.push('/setup?again=1');
     if (id === 'discard' && window.confirm('Throw away your draft and go back to what’s live? You can undo this.')) {
       apply(() => published);
       setSelection(null);

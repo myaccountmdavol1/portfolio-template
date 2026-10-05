@@ -6,7 +6,7 @@ A portfolio site that looks like a Mac desktop on computers and an iPhone home s
 
 1. Click **Deploy** and sign in to Vercel with GitHub.
 2. When Vercel asks for `SETUP_CODE`, make up a setup code of at least 12 characters (see [Your setup code](#your-setup-code)). Vercel then adds a free Neon database and a Blob store for your photos and files. Keep the suggested settings.
-3. Open your new site and click **Claim your site**, then enter your setup code and choose a password. A few setup questions follow (your name, a photo, a headline, a wallpaper and a style), then you publish. You can skip them and come back: they return each time you sign in until you finish, and everything stays editable in the editor.
+3. Open your new site and click **Claim your site**, then enter your setup code and choose a password. A few setup questions follow (what describes you — teacher, student, creative or professional, which starts your site with matching sample apps to replace — then your name, a photo, a headline, a wallpaper and a style), then you publish. You can skip them and come back: they return each time you sign in until you finish, and everything stays editable in the editor. To run setup again later, open **More → Run setup again…** in the editor: it keeps your apps unless you pick a kit, which replaces the apps and layout but keeps your name, email and settings.
 
 ## Your setup code
 

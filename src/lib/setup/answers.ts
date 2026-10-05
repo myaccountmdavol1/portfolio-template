@@ -1,17 +1,19 @@
 import type { KeyValueStore } from '../editor/backend';
 import { fontById } from '../fonts';
 import { isPackId } from '../iconCatalog';
+import { kitById } from '../starterKits';
 import type { SiteData, SiteSettings, SiteStyle } from '../types';
 import { WALLPAPER_CATALOG } from '../wallpaper';
 
 // The setup wizard's steps and answers (src/components/setup). The answers stay in this browser until setup is
 // finished, so leaving and coming back resumes; applyWizardAnswers (applyAnswers.ts) writes them into the site.
 
-export const WIZARD_STEPS = ['welcome', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review', 'publish', 'live'] as const;
+export const WIZARD_STEPS = ['welcome', 'kit', 'you', 'photo', 'headline', 'wallpaper', 'style', 'review', 'publish', 'live'] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 /** The steps shown as progress dots: the questions and Review. */
 export const PROGRESS_STEPS: { step: WizardStep; label: string }[] = [
+  { step: 'kit', label: 'Starting point' },
   { step: 'you', label: 'You' },
   { step: 'photo', label: 'Photo' },
   { step: 'headline', label: 'Headline & bio' },
@@ -22,6 +24,7 @@ export const PROGRESS_STEPS: { step: WizardStep; label: string }[] = [
 
 export const STEP_TITLES: Record<WizardStep, string> = {
   welcome: 'Let\u2019s set up your site',
+  kit: 'What best describes you?',
   you: 'About you',
   photo: 'Your photo',
   headline: 'Headline & bio',
@@ -33,6 +36,8 @@ export const STEP_TITLES: Record<WizardStep, string> = {
 };
 
 export interface WizardAnswers {
+  /** A starter kit id (src/lib/starterKits); missing = keep the site as it is. Only asked while the site is the untouched sample. */
+  kit?: string;
   name: string;
   /** The site title. It follows the name ("<name> \u2014 Portfolio") until the owner types their own. */
   title: string;
@@ -86,17 +91,29 @@ export function withTitle(answers: WizardAnswers, title: string): WizardAnswers 
   return { ...answers, title, titleEdited: true };
 }
 
-export function nextStep(step: WizardStep): WizardStep {
-  return WIZARD_STEPS[Math.min(WIZARD_STEPS.indexOf(step) + 1, WIZARD_STEPS.length - 1)];
+/** The wizard's steps: the kit question only when the site is still the untouched sample (`offerKits`). */
+export function wizardSteps(offerKits: boolean): WizardStep[] {
+  return WIZARD_STEPS.filter((step) => offerKits || step !== 'kit');
 }
 
-export function previousStep(step: WizardStep): WizardStep {
-  return WIZARD_STEPS[Math.max(WIZARD_STEPS.indexOf(step) - 1, 0)];
+export function progressSteps(offerKits: boolean): { step: WizardStep; label: string }[] {
+  return PROGRESS_STEPS.filter((p) => offerKits || p.step !== 'kit');
 }
 
-/** Coming back mid-publish (or after it) lands on Review, with the answers. */
-export function resumeStep(step: WizardStep): WizardStep {
-  return step === 'publish' || step === 'live' ? 'review' : step;
+export function nextStep(step: WizardStep, offerKits: boolean): WizardStep {
+  const steps = wizardSteps(offerKits);
+  return steps[Math.min(steps.indexOf(step) + 1, steps.length - 1)];
+}
+
+export function previousStep(step: WizardStep, offerKits: boolean): WizardStep {
+  const steps = wizardSteps(offerKits);
+  return steps[Math.max(steps.indexOf(step) - 1, 0)];
+}
+
+/** Coming back mid-publish (or after it) lands on Review, with the answers; on the kit question when it isn't asked, on About you. */
+export function resumeStep(step: WizardStep, offerKits: boolean): WizardStep {
+  if (step === 'publish' || step === 'live') return 'review';
+  return step === 'kit' && !offerKits ? 'you' : step;
 }
 
 export const SETUP_WIZARD_KEY = 'portfolio:setupWizard';
@@ -144,6 +161,8 @@ export function parseSavedWizard(raw: string | null): SavedWizard | null {
     return {
       step: saved.step as WizardStep,
       answers: {
+        // Saved before kits existed, or a kit since removed: none.
+        ...(typeof a.kit === 'string' && kitById(a.kit) ? { kit: a.kit } : {}),
         name: a.name as string,
         title: a.title as string,
         titleEdited: a.titleEdited,

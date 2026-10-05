@@ -6,6 +6,7 @@
     "icons:install": "tsx --env-file-if-exists=.env.local scripts/iconPacks.ts",
     "icons:generate": "tsx scripts/generateIconPacks.ts",
     "icons:generate-default": "tsx scripts/generateIconPacks.ts default",
+    "kits:generate": "tsx scripts/generateKitPlaceholders.ts",
     "predev": "npm run icons:install",
     "prebuild": "npm run icons:install",
     "pretest": "npm run icons:install",

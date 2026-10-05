@@ -11,8 +11,11 @@ import type { EditorBackend } from '@/lib/editor/backend';
 import { prepareImage } from '@/lib/editor/imageResize';
 import { resolveSiteFonts } from '@/lib/fonts';
 import { withName, withTitle, type WizardAnswers, type WizardStep } from '@/lib/setup/answers';
+import { KEEP_CURRENT, KIT_WARNING, withKit, type KitQuestion } from '@/lib/setup/kit';
 import type { ReviewRow } from '@/lib/setup/review';
-import type { SiteSettings, SiteStyle } from '@/lib/types';
+import { CLASSIC_ID, STARTER_KITS } from '@/lib/starterKits';
+import type { SiteData, SiteSettings, SiteStyle } from '@/lib/types';
+import { CurrentSiteCard, KitCard } from './KitCard';
 import { SetupPreview } from './SetupPreview';
 import { outlineButton, primaryButton, quietButton, setupField, setupLabel } from './ui';
 
@@ -21,12 +24,48 @@ export type UpdateAnswers = (fn: (answers: WizardAnswers) => WizardAnswers) => v
 
 const hint = 'm-0 text-left text-xs text-[#6b675f]';
 
-export function WelcomeStep() {
+export function WelcomeStep({ offerKits }: { offerKits: boolean }) {
   return (
     <p className="m-0 text-sm leading-relaxed text-[#6b675f]">
-      A few quick questions &mdash; your name, a photo, a headline, a wallpaper and a style &mdash; and your site is ready to share. You can change all of
-      it later in the editor.
+      A few quick questions &mdash; {offerKits ? 'what describes you, ' : ''}your name, a photo, a headline, a wallpaper and a style &mdash; and your site is
+      ready to share. You can change all of it later in the editor.
     </p>
+  );
+}
+
+export function KitStep({
+  answers,
+  update,
+  start,
+  preview,
+  question,
+}: {
+  answers: WizardAnswers;
+  update: UpdateAnswers;
+  start: SiteData;
+  preview: SiteSettings;
+  question: KitQuestion;
+}) {
+  const again = question === 'again';
+  // No pick keeps the site as it is: on a first run that's the sample (Classic); on a re-run, the owner's own site.
+  const picked = answers.kit ?? (again ? 'current' : CLASSIC_ID);
+  return (
+    <div className="flex flex-col gap-4 text-left">
+      <SetupPreview site={preview} />
+      <div role="radiogroup" aria-label="Starting point" className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        {again && <CurrentSiteCard site={start} name={KEEP_CURRENT} checked={picked === 'current'} onPick={() => update((a) => withKit(a, undefined, start))} />}
+        {STARTER_KITS.map((kit) => (
+          <KitCard
+            key={kit.id}
+            kit={kit}
+            checked={picked === kit.id}
+            warning={again ? KIT_WARNING : undefined}
+            onPick={() => update((a) => withKit(a, kit.id, start, again))}
+          />
+        ))}
+      </div>
+      <p className={hint}>Each one starts your site with sample apps marked &ldquo;Replace me&rdquo;. You can change everything later in the editor.</p>
+    </div>
   );
 }
 
@@ -179,8 +218,11 @@ export function ReviewStep({ rows, onEdit }: { rows: ReviewRow[]; onEdit: (step:
         <div key={row.label} className="flex items-center gap-3 px-3 py-2.5 text-left text-sm">
           <dt className="w-24 flex-none text-xs font-medium text-[#6b675f]">{row.label}</dt>
           <dd className="m-0 flex min-w-0 flex-1 items-center gap-3">
-            <span title={row.value} className="min-w-0 flex-1 truncate">
-              {row.value}
+            <span className="min-w-0 flex-1">
+              <span title={row.value} className="block truncate">
+                {row.value}
+              </span>
+              {row.warning && <span className="block text-xs font-medium text-[#b3261e]">{row.warning}</span>}
             </span>
             <button
               type="button"
@@ -197,7 +239,8 @@ export function ReviewStep({ rows, onEdit }: { rows: ReviewRow[]; onEdit: (step:
   );
 }
 
-export function LiveStep({ url }: { url: string }) {
+/** `tour`: Start editing shows the editor tour (the first run); a re-run from the editor goes straight back to it. */
+export function LiveStep({ url, tour }: { url: string; tour: boolean }) {
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle');
   // The confirmation fades back to idle; the timer is cleared on unmount.
   useEffect(() => {
@@ -223,7 +266,7 @@ export function LiveStep({ url }: { url: string }) {
         <button type="button" onClick={() => void copy()} className={outlineButton}>
           Copy link
         </button>
-        <Link href="/?edit=1&welcome=1" className={primaryButton}>
+        <Link href={tour ? '/?edit=1&welcome=1' : '/?edit=1'} className={primaryButton}>
           Start editing
         </Link>
       </div>
