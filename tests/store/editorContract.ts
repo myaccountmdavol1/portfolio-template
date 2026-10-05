@@ -69,6 +69,9 @@ export function editorContract(name: string, setup: { store: () => ServerStore; 
       await expect(owner.get()).resolves.toEqual(record);
       await owner.set({ ...record, sessionSecret: 'k2' });
       await expect(owner.get()).resolves.toEqual({ ...record, sessionSecret: 'k2' });
+      // The setup wizard's finish time is optional and must round-trip.
+      await owner.set({ ...record, setupDoneAt: '2026-10-04T12:00:00.000Z' });
+      await expect(owner.get()).resolves.toEqual({ ...record, setupDoneAt: '2026-10-04T12:00:00.000Z' });
     });
   });
 }

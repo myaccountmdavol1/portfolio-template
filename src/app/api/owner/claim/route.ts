@@ -1,4 +1,4 @@
-import { json, notAvailable, secureCookies } from '@/lib/auth/http';
+import { json, notAvailable, sameSiteOnly, secureCookies } from '@/lib/auth/http';
 import { claimOwner, vercelStore, visitorKeyFor } from '@/lib/auth/owner';
 import { sessionCookie } from '@/lib/auth/session';
 
@@ -6,6 +6,8 @@ import { sessionCookie } from '@/lib/auth/session';
 export async function POST(request: Request) {
   const store = vercelStore();
   if (!store) return notAvailable();
+  const refused = sameSiteOnly(request);
+  if (refused) return refused;
   const body = (await request.json().catch(() => null)) as { setupCode?: unknown; password?: unknown } | null;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
   const result = await claimOwner(store, { setupCode: str(body?.setupCode), password: str(body?.password), visitorKey: visitorKeyFor(request) });

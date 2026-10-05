@@ -69,6 +69,43 @@ describe('HTTP editor backend', () => {
     await expect(none.upload(file, 'images')).rejects.toThrow(/storage/i);
   });
 
+  it('a Blob upload that fails because the session ended sends the owner to sign in', async () => {
+    const onUnauthorized = vi.fn();
+    const file = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+    const { fetch, calls } = fakeFetch({ 'GET /api/owner/session': { body: { claimed: true, owner: false } } });
+
+    const uploadToBlob = vi.fn(async () => {
+      throw new Error('Vercel Blob: Failed to retrieve the client token');
+    });
+    const blob = createHttpBackend({ media: 'blob', onUnauthorized, fetch, uploadToBlob });
+    await expect(blob.upload(file, 'images')).rejects.toBeInstanceOf(SignedOutError);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(['GET /api/owner/session']);
+
+    const uploadToBlobPresigned = vi.fn(async () => {
+      throw new Error('Vercel Blob: Failed to retrieve the presigned URL');
+    });
+    const presigned = createHttpBackend({ media: 'blob-presigned', onUnauthorized, fetch, uploadToBlobPresigned });
+    await expect(presigned.upload(file, 'images')).rejects.toBeInstanceOf(SignedOutError);
+    expect(onUnauthorized).toHaveBeenCalledTimes(2);
+  });
+
+  it('a Blob upload that fails while still signed in rejects with the upload\u2019s own error', async () => {
+    const onUnauthorized = vi.fn();
+    const file = new File([new Uint8Array([1])], 'photo.png', { type: 'image/png' });
+    const uploadToBlob = vi.fn(async () => {
+      throw new Error('File too large');
+    });
+
+    const signedIn = fakeFetch({ 'GET /api/owner/session': { body: { claimed: true, owner: true } } });
+    await expect(createHttpBackend({ media: 'blob', onUnauthorized, fetch: signedIn.fetch, uploadToBlob }).upload(file, 'images')).rejects.toThrow('File too large');
+
+    // When the session can't be checked either (offline, server error), the owner sees the upload's error.
+    const down = fakeFetch({ 'GET /api/owner/session': { status: 500, body: { error: 'down' } } });
+    await expect(createHttpBackend({ media: 'blob', onUnauthorized, fetch: down.fetch, uploadToBlob }).upload(file, 'images')).rejects.toThrow('File too large');
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
   it('wires media and moderation to their routes', async () => {
     const { fetch, calls } = fakeFetch({
       'GET /api/owner/media?folder=images': { body: { items: [{ path: 'images/1-a.png' }] } },

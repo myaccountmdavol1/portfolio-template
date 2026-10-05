@@ -2,8 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureSchema } from '../store/postgres/schema';
 import { pgliteSql } from '../store/postgres/sql';
 import { postgresStore } from '../store/postgres/store';
-import { claimOwner, isOwnerRequest, isSetupPending, MIN_SETUP_CODE_LENGTH, SETUP_CODE_AS_PASSWORD, setupCodeMatches, signInOwner, usableSetupCode, type OwnerStore } from './owner';
-import { SESSION_COOKIE } from './session';
+import {
+  claimOwner,
+  isOwnerRequest,
+  isSetupPending,
+  markSetupDone,
+  MIN_SETUP_CODE_LENGTH,
+  SETUP_CODE_AS_PASSWORD,
+  sessionMatches,
+  setupCodeMatches,
+  signInOwner,
+  usableSetupCode,
+  type OwnerStore,
+} from './owner';
+import { SESSION_COOKIE, signSession } from './session';
 
 const sql = pgliteSql();
 const store = postgresStore(sql) as OwnerStore;
@@ -165,5 +177,39 @@ describe('isSetupPending', () => {
     ).resolves.toBe(false);
     const broken = { ...store, owner: { ...store.owner, get: () => Promise.reject(new Error('timeout')) } } as OwnerStore;
     await expect(isSetupPending(() => broken)).resolves.toBe(false);
+  });
+});
+
+describe('finishing setup', () => {
+  it('is recorded with its time, keeps the password and session, and survives a password reset', async () => {
+    const first = await claimOwner(store, { setupCode: CODE, password: 'first password', visitorKey: nextVisitor() }, CODE);
+    if (!first.ok) throw new Error(first.error);
+    expect((await store.owner.get())?.setupDoneAt).toBeUndefined();
+
+    await markSetupDone(store, new Date('2026-10-04T10:00:00Z'));
+    expect((await store.owner.get())?.setupDoneAt).toBe('2026-10-04T10:00:00.000Z');
+    await expect(isOwnerRequest(store, withCookie(first.token))).resolves.toBe(true);
+
+    const reset = await claimOwner(store, { setupCode: CODE, password: 'second password', visitorKey: nextVisitor() }, CODE);
+    if (!reset.ok) throw new Error(reset.error);
+    expect((await store.owner.get())?.setupDoneAt).toBe('2026-10-04T10:00:00.000Z');
+  });
+
+  it('does nothing on an unclaimed site', async () => {
+    await markSetupDone(store);
+    await expect(store.owner.get()).resolves.toBeNull();
+  });
+});
+
+describe('sessionMatches', () => {
+  it('needs an owner record and a live cookie signed with its secret', () => {
+    const record = { passwordHash: 'h', salt: 's', sessionSecret: 'k', updatedAt: '2026-10-04T00:00:00.000Z' };
+    const now = new Date('2026-10-04T00:00:00Z');
+    const token = signSession('k', now);
+    expect(sessionMatches(record, token, now)).toBe(true);
+    expect(sessionMatches(null, token, now)).toBe(false);
+    expect(sessionMatches({ ...record, sessionSecret: 'other' }, token, now)).toBe(false);
+    expect(sessionMatches(record, undefined, now)).toBe(false);
+    expect(sessionMatches(record, token, new Date('2026-12-01T00:00:00Z'))).toBe(false); // expired after 30 days
   });
 });

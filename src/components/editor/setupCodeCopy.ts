@@ -6,3 +6,6 @@ export function setupCodeProblem(tooShort: boolean): string {
     ? 'Your SETUP_CODE is too short — it needs at least 12 characters. Change it in your Vercel project’s Settings → Environment Variables, then redeploy.'
     : 'Add a SETUP_CODE of at least 12 characters in your Vercel project’s Settings → Environment Variables, then redeploy. You’ll use it here to claim the site.';
 }
+
+/** The claim form's instructions. */
+export const CLAIM_INSTRUCTIONS = 'Enter the setup code you chose when you deployed (at least 12 characters), then pick a password.';

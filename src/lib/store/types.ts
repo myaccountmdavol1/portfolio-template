@@ -31,6 +31,8 @@ export interface OwnerRecord {
   salt: string;
   sessionSecret: string;
   updatedAt: string; // ISO 8601
+  /** When the owner finished the setup wizard (ISO 8601). Missing = not finished, as in records from before it existed. */
+  setupDoneAt?: string;
 }
 
 /** Everything the server keeps. One implementation per backend (Firebase now, Postgres + Blob in 2b). */

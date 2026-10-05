@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { takeChatQuota } from '../chat/limits';
 import { getStore } from '../store';
-import type { EditorStore, ServerStore } from '../store/types';
+import type { EditorStore, OwnerRecord, ServerStore } from '../store/types';
 import { hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from './password';
 import { newSessionSecret, readCookie, SESSION_COOKIE, signSession, verifySession } from './session';
 
@@ -63,7 +63,9 @@ export async function claimOwner(
   if (!setupCodeMatches(input.setupCode, code)) return { ok: false, status: 403, error: 'That setup code isn’t right.' };
   const { passwordHash, salt } = await hashPassword(input.password);
   const sessionSecret = newSessionSecret();
-  await store.owner.set({ passwordHash, salt, sessionSecret, updatedAt: now.toISOString() });
+  // A password reset is a claim too: it keeps the setup wizard finished.
+  const setupDoneAt = (await store.owner.get())?.setupDoneAt;
+  await store.owner.set({ passwordHash, salt, sessionSecret, updatedAt: now.toISOString(), ...(setupDoneAt ? { setupDoneAt } : {}) });
   return { ok: true, token: signSession(sessionSecret, now) };
 }
 
@@ -87,9 +89,19 @@ export async function signInOwner(
   return { ok: true, token: signSession(owner.sessionSecret, now) };
 }
 
+/** True when `token` (the session cookie) is live and signed with this owner's secret. */
+export function sessionMatches(owner: OwnerRecord | null, token: string | null | undefined, now = new Date()): boolean {
+  return Boolean(owner && verifySession(token, owner.sessionSecret, now));
+}
+
 export async function isOwnerRequest(store: OwnerStore, request: Request, now = new Date()): Promise<boolean> {
+  return sessionMatches(await store.owner.get(), readCookie(request, SESSION_COOKIE), now);
+}
+
+/** The setup wizard was finished (after a successful publish): /admin stops sending the owner to /setup. */
+export async function markSetupDone(store: OwnerStore, now = new Date()): Promise<void> {
   const owner = await store.owner.get();
-  return Boolean(owner && verifySession(readCookie(request, SESSION_COOKIE), owner.sessionSecret, now));
+  if (owner) await store.owner.set({ ...owner, setupDoneAt: now.toISOString() });
 }
 
 /** Stores already seen claimed. Claiming is one-way, so the home page never needs to ask them again. */

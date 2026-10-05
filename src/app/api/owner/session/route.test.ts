@@ -9,6 +9,7 @@ const { pgliteSql } = await import('@/lib/store/postgres/sql');
 const { postgresStore } = await import('@/lib/store/postgres/store');
 const session = await import('./route');
 const claim = await import('../claim/route');
+const setup = await import('../setup/route');
 
 const sql = pgliteSql();
 let ip = 0;
@@ -36,7 +37,13 @@ describe('owner session routes', () => {
     const res = await session.GET(new Request('http://localhost/api/owner/session'));
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'Not available on this site.' });
-    for (const r of [await session.DELETE(), await session.POST(post({ password: 'x' })), await claim.POST(post({ setupCode: 'x', password: 'x' }))]) {
+    const signOut = new Request('http://localhost/api/owner/session', { method: 'DELETE' });
+    for (const r of [
+      await session.DELETE(signOut),
+      await session.POST(post({ password: 'x' })),
+      await claim.POST(post({ setupCode: 'x', password: 'x' })),
+      await setup.POST(post({})),
+    ]) {
       expect(r.status).toBe(404);
       expect(await r.json()).toEqual({ error: 'Not available on this site.' });
       expect(r.headers.get('set-cookie')).toBeNull();
@@ -74,7 +81,7 @@ describe('owner session routes', () => {
     res = await session.POST(post({ password: 'a good password' }));
     expect(res.status).toBe(200);
     expect(cookieOf(res)).toMatch(/^portfolio_owner=/);
-    res = await session.DELETE();
+    res = await session.DELETE(new Request('http://localhost/api/owner/session', { method: 'DELETE' }));
     expect(res.headers.get('set-cookie')).toMatch(/^portfolio_owner=; .*Max-Age=0/);
   });
 
@@ -100,5 +107,23 @@ describe('owner session routes', () => {
     const res = await claim.POST(post({ setupCode: 'nope', password: 'a good password' }));
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: 'That setup code isn’t right.' });
+  });
+
+  it('report setupDone for the signed-in owner once POST /api/owner/setup has run, and keep it through a reset', async () => {
+    const cookie = cookieOf(await claim.POST(post({ setupCode: 'route-setup-code', password: 'a good password' })));
+    const status = async (c: string) => (await session.GET(new Request('http://localhost/api/owner/session', { headers: { cookie: c } }))).json();
+    expect(await status(cookie)).toMatchObject({ owner: true, setupDone: false });
+
+    const visitor = await setup.POST(post({}));
+    expect(visitor.status).toBe(401);
+    const res = await setup.POST(post({}, cookie));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(await status(cookie)).toMatchObject({ owner: true, setupDone: true });
+    // Only the owner learns it.
+    expect(await status('')).toMatchObject({ claimed: true, owner: false, setupDone: false });
+
+    const reset = await claim.POST(post({ setupCode: 'route-setup-code', password: 'a new password!' }));
+    expect(await status(cookieOf(reset))).toMatchObject({ owner: true, setupDone: true });
   });
 });

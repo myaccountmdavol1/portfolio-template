@@ -4,13 +4,16 @@ import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { setEditorFlag } from '@/lib/editor/gate';
 import { usePasswordSession } from './usePasswordSession';
-import { setupCodeProblem } from './setupCodeCopy';
+import { CLAIM_INSTRUCTIONS, setupCodeProblem } from './setupCodeCopy';
 
 const button = 'inline-flex h-10 cursor-pointer items-center justify-center rounded-full px-5 text-sm font-medium transition-colors disabled:opacity-50';
 const field = 'h-10 w-full rounded-lg border border-black/15 bg-white px-3 text-sm text-[#1d1c1a] outline-none focus:border-[#0a84ff]';
 const label = 'flex flex-col gap-1 text-left text-xs font-medium text-[#6b675f]';
 
-/** /admin on Vercel-backend sites: claim the site, sign in, or reset the password with the setup code. */
+/**
+ * /admin on Vercel-backend sites: claim the site, sign in, or reset the password with the setup code.
+ * Until the setup wizard is finished, a successful claim or sign-in continues at /setup.
+ */
 export function AdminPasswordSignIn() {
   const { session, refresh } = usePasswordSession();
   const [mode, setMode] = useState<'signIn' | 'reset'>('signIn');
@@ -35,7 +38,11 @@ export function AdminPasswordSignIn() {
       }
       setExpired(false);
       setMode('signIn');
-      await refresh();
+      const next = await refresh();
+      // A new owner, or one who skipped it, goes on to the setup wizard until it is finished.
+      // A full reload on purpose: /setup starts from a fresh page load, not a client-side navigation.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      if (next?.owner && !next.setupDone) window.location.assign('/setup');
     } catch {
       setError('Couldn’t reach the site. Check your connection and try again.');
     } finally {
@@ -110,7 +117,7 @@ export function AdminPasswordSignIn() {
         {ready && !ready.claimed && ready.configured && (
           <>
             <p className="mt-4 mb-0 text-sm font-medium">Claim your site</p>
-            <p className="m-0 mt-1 text-sm text-[#6b675f]">Enter the setup code you chose when you deployed, then pick a password.</p>
+            <p className="m-0 mt-1 text-sm text-[#6b675f]">{CLAIM_INSTRUCTIONS}</p>
             {claimForm('Claim this site')}
           </>
         )}
@@ -157,6 +164,11 @@ export function AdminPasswordSignIn() {
         {ready && ready.owner && (
           <div className="mt-4 flex flex-col gap-3">
             <p className="m-0 text-sm text-[#6b675f]">You&rsquo;re signed in as the owner.</p>
+            {!ready.setupDone && (
+              <Link href="/setup" className={`${button} bg-[#1d1c1a] text-white hover:bg-black`}>
+                Finish setting up
+              </Link>
+            )}
             <Link href="/?edit=1" className={`${button} bg-[#0a84ff] text-white hover:bg-[#0071e3]`}>
               Open the editor
             </Link>

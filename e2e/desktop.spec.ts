@@ -178,3 +178,7 @@ test('a site without Style choices keeps its original fonts and loads no Google 
   await expect(page.locator('[data-layout="desktop"]')).toHaveCSS('font-family', /Geist/);
   await expect(page.locator('link[href^="https://fonts.googleapis.com"]')).toHaveCount(0);
 });
+
+test('/setup is not part of a site without the Vercel backend', async ({ request }) => {
+  expect((await request.get('/setup')).status()).toBe(404);
+});

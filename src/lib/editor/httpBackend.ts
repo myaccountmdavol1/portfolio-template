@@ -11,7 +11,10 @@ export class SignedOutError extends Error {}
 export interface HttpBackendOptions {
   /** How uploads are stored, from GET /api/owner/session. null: this site has no file storage. */
   media: 'blob' | 'blob-presigned' | 'disk' | null;
-  /** Called on every 401, e.g. to send the owner back to /admin (unsaved edits stay in the local mirror). */
+  /**
+   * Called on every 401, and when a Blob upload fails because the session ended, e.g. to send the owner back
+   * to /admin (unsaved edits stay in the local mirror).
+   */
   onUnauthorized: () => void;
   fetch?: typeof fetch;
   uploadToBlob?: (pathname: string, file: File) => Promise<string>;
@@ -56,6 +59,29 @@ export function createHttpBackend(options: HttpBackendOptions): EditorBackend {
   const send = (url: string, method: string, body?: unknown) =>
     call<unknown>(url, { method, body: body === undefined ? undefined : JSON.stringify(body) }).then(() => undefined);
 
+  /** Whether GET /api/owner/session says this browser is no longer the owner. Unknown (offline, server error) = no. */
+  async function sessionEnded(): Promise<boolean> {
+    try {
+      const res = await doFetch('/api/owner/session', { credentials: 'same-origin', cache: 'no-store' });
+      return res.ok && !((await res.json()) as { owner?: unknown }).owner;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Blob uploads go from the browser straight to Vercel Blob, so a 401 from the token route never reaches call(). */
+  async function viaBlob(uploader: (pathname: string, file: File) => Promise<string>, path: string, file: File): Promise<string> {
+    try {
+      return await uploader(path, file);
+    } catch (err) {
+      if (await sessionEnded()) {
+        options.onUnauthorized();
+        throw new SignedOutError('Signed out');
+      }
+      throw err;
+    }
+  }
+
   return {
     kind: 'http',
     loadDraft: async () => (await call<{ draft: SiteData | null }>('/api/owner/draft')).draft,
@@ -63,8 +89,8 @@ export function createHttpBackend(options: HttpBackendOptions): EditorBackend {
     publish: (data) => send('/api/owner/publish', 'POST', { data }),
     async upload(file, folder) {
       const path = storagePath(folder, file.name, now());
-      if (options.media === 'blob') return (options.uploadToBlob ?? uploadToVercelBlob)(path, file);
-      if (options.media === 'blob-presigned') return (options.uploadToBlobPresigned ?? uploadToVercelBlobPresigned)(path, file);
+      if (options.media === 'blob') return viaBlob(options.uploadToBlob ?? uploadToVercelBlob, path, file);
+      if (options.media === 'blob-presigned') return viaBlob(options.uploadToBlobPresigned ?? uploadToVercelBlobPresigned, path, file);
       if (options.media !== 'disk') throw new Error('File storage isn’t set up on this site.');
       const form = new FormData();
       form.set('path', path);

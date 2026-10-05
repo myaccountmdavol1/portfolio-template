@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MIN_SETUP_CODE_LENGTH } from '@/lib/auth/owner';
-import { setupCodeProblem } from './setupCodeCopy';
+import { CLAIM_INSTRUCTIONS, setupCodeProblem } from './setupCodeCopy';
 
 describe('setupCodeProblem', () => {
   it('says a too-short code needs 12 characters and where to change it', () => {
@@ -17,5 +17,12 @@ describe('setupCodeProblem', () => {
 
   it('matches the real minimum', () => {
     for (const tooShort of [true, false]) expect(setupCodeProblem(tooShort)).toContain(`at least ${MIN_SETUP_CODE_LENGTH} characters`);
+  });
+});
+
+describe('CLAIM_INSTRUCTIONS', () => {
+  it('says which code to use and how long it is', () => {
+    expect(CLAIM_INSTRUCTIONS).toBe('Enter the setup code you chose when you deployed (at least 12 characters), then pick a password.');
+    expect(CLAIM_INSTRUCTIONS).toContain(`at least ${MIN_SETUP_CODE_LENGTH} characters`);
   });
 });

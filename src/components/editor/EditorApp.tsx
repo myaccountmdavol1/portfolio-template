@@ -35,6 +35,7 @@ import { IconPackContext } from '@/components/IconPackContext';
 import { ContextMenu } from './ContextMenu';
 import { EditorContext, requestCleanUp, type EditorApi, type IconTarget, type MenuRequest, type Selection } from './EditorContext';
 import { EditorToolbar, toolbarButton, type Preview } from './EditorToolbar';
+import { EditorCoachMarks } from './EditorCoachMarks';
 import { IconPicker } from './IconPicker';
 import { Inspector, INSPECTOR_W } from './Inspector';
 import { PhoneFrame } from './PhoneFrame';
@@ -458,6 +459,8 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
       {active && addMenu && (
         <ContextMenu x={addMenu.x} y={addMenu.y} label="Add" items={addItems} onClose={closeAddMenu} onPick={addItem} />
       )}
+      {/* After the setup wizard's "Start editing": a one-time tour of the toolbar. */}
+      {ready && <EditorCoachMarks />}
       {active && menu && menuItems.length > 0 && (
         <ContextMenu
           x={menu.x}

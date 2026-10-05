@@ -6,7 +6,7 @@ A portfolio site that looks like a Mac desktop on computers and an iPhone home s
 
 1. Click **Deploy** and sign in to Vercel with GitHub.
 2. When Vercel asks for `SETUP_CODE`, make up a setup code of at least 12 characters (see [Your setup code](#your-setup-code)). Vercel then adds a free Neon database and a Blob store for your photos and files. Keep the suggested settings.
-3. Open your new site and click **Claim your site**, then enter your setup code and choose a password.
+3. Open your new site and click **Claim your site**, then enter your setup code and choose a password. A few setup questions follow (your name, a photo, a headline, a wallpaper and a style), then you publish. You can skip them and come back: they return each time you sign in until you finish, and everything stays editable in the editor.
 
 ## Your setup code
 
@@ -54,7 +54,7 @@ Open http://localhost:3000. With no Firebase settings it shows the sample site. 
 
 ## Running without Firebase (Vercel storage)
 
-- On Vercel: add a Neon Postgres database and a Blob store to the project (Storage tab), and set `SETUP_CODE` to a code you choose (at least 12 characters; generate one with `openssl rand -base64 18` or a password manager — a shorter code counts as not set). Deploy, open `/admin`, enter the code and choose a password. Forgot it? Use "Forgot password?" with the same code.
+- On Vercel: add a Neon Postgres database and a Blob store to the project (Storage tab), and set `SETUP_CODE` to a code you choose (at least 12 characters; generate one with `openssl rand -base64 18` or a password manager — a shorter code counts as not set). Deploy, open `/admin`, enter the code and choose a password, then answer a few setup questions. Forgot it? Use "Forgot password?" with the same code.
 - After adding the database and Blob store to a project, redeploy it so `/admin` switches to password sign-in.
 - Locally: `PORTFOLIO_BACKEND=vercel PGLITE_DIR=.data/pglite SETUP_CODE=dev-setup-code npm run dev` — a database and an uploads folder are created under `.data/` (git-ignored). `npm run seed:firestore` seeds whichever backend is configured.
 - `PGLITE_DIR` and `MEDIA_DIR` are for local development and tests only.
