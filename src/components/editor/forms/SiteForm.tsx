@@ -11,6 +11,7 @@ import type { HeadlineStyle, MenuBarPart, MenuItem, SiteSettings, TourSettings, 
 import { ActionPicker } from '../ActionPicker';
 import { useEditor } from '../EditorContext';
 import { ColorField, LinkListEditor, ListEditor, NumberField, Section, SelectField, smallButton, TextField, Toggle, UploadField } from '../fields';
+import { AddonsSection } from './AddonsSection';
 import { ScreensaverSection } from './ScreensaverSection';
 import { StyleSection } from './StyleSection';
 
@@ -146,6 +147,8 @@ export function SiteForm() {
 
       <ScreensaverSection />
 
+      <AddonsSection />
+
       <Section title="Control Center">
         <p className="m-0 text-[11px] leading-snug text-[#6b675f]">
           The tiles visitors see when they open Control Center (the two switches, top right). A switched-off tile’s effect is off for everyone too.
@@ -166,14 +169,7 @@ export function SiteForm() {
           };
           return <Toggle key={tile} label={label} checked={shown.has(tile)} onChange={setShown} />;
         })}
-        <p className="m-0 text-[11px] leading-snug text-[#6b675f]">
-          Now Playing stays hidden until Spotify is connected. With SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET set in Vercel (redirect URI{' '}
-          <code>{`${window.location.origin}/api/spotify/callback`}</code>), click{' '}
-          <a href="/api/spotify/login" target="_blank" rel="noopener noreferrer" className="text-[#0a84ff] underline">
-            Connect Spotify ↗
-          </a>
-          . Spotify asks you to reconnect about every 6 months — use the same link.
-        </p>
+        <p className="m-0 text-[11px] leading-snug text-[#6b675f]">Now Playing stays hidden until Spotify is connected. Set it up in Add-ons, above.</p>
       </Section>
 
       <Section title="404 page">

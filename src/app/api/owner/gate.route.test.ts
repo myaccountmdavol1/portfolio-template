@@ -22,6 +22,8 @@ const hallOfFame = await import('./hall-of-fame/route');
 const inbox = await import('./inbox/route');
 const chatLogs = await import('./chat-logs/route');
 const setup = await import('./setup/route');
+const addons = await import('./addons/route');
+const published = await import('./published/route');
 
 type Handler = (request: Request) => Promise<Response> | Response;
 type Entry = { name: string; handler: Handler; method: string; path: string; ownerOnly: boolean };
@@ -53,6 +55,8 @@ const ROUTES: Entry[] = [
   entry('media', 'DELETE', media.DELETE),
   entry('upload', 'POST', upload.POST),
   entry('setup', 'POST', setup.POST),
+  entry('published', 'GET', published.GET),
+  ...crud('addons', addons),
   ...crud('guestbook', guestbook),
   ...crud('hall-of-fame', hallOfFame),
   ...crud('inbox', inbox),

@@ -4,6 +4,7 @@ import { createContext, useContext } from 'react';
 import type { AppAction } from '@/lib/editor/appMenu';
 import type { EditorBackend, UploadFolder } from '@/lib/editor/backend';
 import type { SiteData } from '@/lib/types';
+import type { AddonsApi } from './useAddons';
 
 export type Selection = { kind: 'app'; appId: string } | { kind: 'dock'; index: number } | { kind: 'site' };
 
@@ -18,6 +19,8 @@ export interface EditorApi {
   guestbook: EditorBackend['guestbook'];
   hallOfFame: EditorBackend['hallOfFame'];
   inbox: EditorBackend['inbox'];
+  /** Site settings, Add-ons, and whether visitors get chat (the Messages form's note). */
+  addons: AddonsApi;
   /** Opens the right-click menu for `target` at a screen position. */
   openMenu: (menu: MenuRequest) => void;
   /** Id of the app whose desktop label is being renamed inline. */

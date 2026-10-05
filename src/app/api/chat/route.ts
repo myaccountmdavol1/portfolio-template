@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
+import { chatKey } from '@/lib/addons/config';
 import { chatLimitsFromEnv, memoryCounterStore, takeChatQuota, type CounterStore } from '@/lib/chat/limits';
 import { encodeEvent, type ChatEvent, type ShowEvent } from '@/lib/chat/events';
 import { buildSystemPrompt } from '@/lib/chat/prompt';
@@ -32,7 +33,9 @@ function visitorKey(request: Request): string {
 const json = (status: number, body: { error: string; code?: string }) => Response.json(body, { status });
 
 export async function POST(request: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) return json(503, { error: 'Chat isn’t set up on this site yet.', code: 'unconfigured' });
+  // The hosting's ANTHROPIC_API_KEY, else the key saved in Site settings, Add-ons.
+  const resolved = await chatKey();
+  if (!resolved) return json(503, { error: 'Chat isn\u2019t set up on this site yet.', code: 'unconfigured' });
 
   const parsed = parseChatRequest(await request.json().catch(() => null));
   if (!parsed.ok) return json(400, { error: parsed.error });
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
 
   const tool = showTool(showableTargets(data));
   const system = buildSystemPrompt(data, app);
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey: resolved.key });
   // The first turn may call show (at most one); the follow-up after a show may only write text.
   const firstChoice: Anthropic.Beta.BetaToolChoice = { type: 'auto', disable_parallel_tool_use: true };
   const ask = (messages: Anthropic.Beta.BetaMessageParam[], toolChoice: Anthropic.Beta.BetaToolChoice = firstChoice) =>
@@ -136,7 +139,8 @@ export async function POST(request: Request) {
         }
       } catch (err) {
         if (err instanceof Anthropic.RateLimitError) console.error('Anthropic rate limit hit', err.message);
-        else if (err instanceof Anthropic.AuthenticationError) console.error('Invalid ANTHROPIC_API_KEY');
+        else if (err instanceof Anthropic.AuthenticationError)
+          console.error(resolved.source === 'env' ? 'Invalid ANTHROPIC_API_KEY' : 'The Claude key saved in Add-ons was refused (revoked?)');
         else if (err instanceof Anthropic.APIError) console.error(`Anthropic API error ${err.status}`, err.message);
         else console.error('Chat stream failed', err);
         if (!reply.trim()) send({ type: 'text', text: 'Sorry — I couldn’t answer just now. Try again in a moment?' });

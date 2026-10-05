@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { StoredAddons } from '../../addons/types';
 import type { ChatLog } from '../../chat/log';
 import type { InboxMessage } from '../../contact';
 import { assembleSiteData } from '../../firebase/schema';
@@ -156,6 +157,21 @@ export function postgresStore(sql: Sql): ServerStore {
         await q(
           "insert into documents (scope, key, value) values ('secret', 'spotify', $1::jsonb) on conflict (scope, key) do update set value = documents.value || excluded.value, updated_at = now()",
           [json({ refreshToken, updatedAt: now.toISOString() })],
+        );
+      },
+      async remove() {
+        await q("delete from documents where scope = 'secret' and key = 'spotify'");
+      },
+    },
+    addons: {
+      async get() {
+        const [row] = await q<{ value: StoredAddons }>("select value from documents where scope = 'secret' and key = 'addons'");
+        return row?.value ?? null;
+      },
+      async set(value) {
+        await q(
+          "insert into documents (scope, key, value) values ('secret', 'addons', $1::jsonb) on conflict (scope, key) do update set value = excluded.value, updated_at = now()",
+          [json(value)],
         );
       },
     },

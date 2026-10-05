@@ -1,3 +1,5 @@
+import { spotifyCredentials } from '@/lib/addons/config';
+import { mayConnectSpotify } from '@/lib/auth/owner';
 import { readConnection, saveConnection } from '@/lib/spotify/tokenStore';
 
 const page = (title: string, body: string, status = 200) =>
@@ -8,16 +10,25 @@ const page = (title: string, body: string, status = 200) =>
 
 /** Spotify sends the owner back here after they agree; the connection is saved for Now Playing. */
 export async function GET(request: Request) {
+  // Spotify's redirect is a cross-site navigation, so no Origin check here: the owner's session cookie (SameSite=Lax,
+  // sent on top-level GETs) and the state cookie set by /api/spotify/login are what count. Nothing is saved without them.
+  if (!(await mayConnectSpotify(request))) {
+    return page('Sign in first', '<p>Only this site\u2019s owner can connect Spotify. <a href="/admin">Sign in</a>, then connect from Site settings \u2192 Add-ons.</p>', 401);
+  }
+  const credentials = await spotifyCredentials();
+  if (!credentials) {
+    return page('Spotify isn\u2019t set up', '<p>Add your Spotify Client ID and secret in Site settings \u2192 Add-ons first, then connect from there.</p>', 503);
+  }
   const url = new URL(request.url);
   const cookieState = request.headers.get('cookie')?.match(/(?:^|;\s*)spotify_state=([a-f0-9]+)/)?.[1];
   const code = url.searchParams.get('code');
   if (!code || !cookieState || url.searchParams.get('state') !== cookieState) {
     return page('Spotify didn’t connect', `<p>${url.searchParams.get('error') ? 'Access was declined.' : 'The sign-in expired.'} <a href="/api/spotify/login">Try again</a>.</p>`, 400);
   }
-  const { SPOTIFY_CLIENT_ID: id, SPOTIFY_CLIENT_SECRET: secret } = process.env;
+  const { clientId, clientSecret } = credentials;
   const res = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
-    headers: { Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: new URL('/api/spotify/callback', request.url).toString() }),
     cache: 'no-store',
   });

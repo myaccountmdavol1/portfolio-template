@@ -1,3 +1,4 @@
+import type { StoredAddons } from '../addons/types';
 import type { ChatLog } from '../chat/log';
 import type { CounterStore } from '../chat/limits';
 import type { ContactSubmission, InboxMessage } from '../contact';
@@ -79,7 +80,11 @@ export interface ServerStore {
     save(connection: Omit<SpotifyConnection, 'updatedAt'>, now?: Date): Promise<void>;
     /** Keeps spotifyUserId; replaces only the token. */
     rotate(refreshToken: string, now?: Date): Promise<void>;
+    /** Forgets the connection (Add-ons, Remove). Removing nothing is fine. */
+    remove(): Promise<void>;
   };
+  /** Add-on keys, sealed with the setup code (src/lib/addons/secrets.ts). Server-only; never sent to a browser. */
+  addons: { get(): Promise<StoredAddons | null>; set(value: StoredAddons): Promise<void> };
   editor?: EditorStore;
   /** Vercel backend only: the owner's password and session secret (Firebase sites sign in with Google). */
   owner?: { get(): Promise<OwnerRecord | null>; set(record: OwnerRecord): Promise<void> };

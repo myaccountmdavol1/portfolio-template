@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useSyncExternalStore } from 'react';
 import { ClaimPill } from '@/components/ClaimPill';
 import { SiteView } from '@/components/SiteView';
+import type { HostingAddons } from '@/lib/addons/types';
 import { editorModeFor, readEditorFlag, type EditorMode } from '@/lib/editor/gate';
 import type { SiteData } from '@/lib/types';
 
@@ -22,15 +23,18 @@ export function Portfolio({
   initialIsPhone,
   ownerBackend,
   setupPending = false,
+  hosting,
 }: {
   data: SiteData;
   initialIsPhone: boolean;
   ownerBackend: 'firebase' | 'vercel';
   /** A new Vercel-backend site nobody has claimed: visitors see "Claim your site". Never in the editor. */
   setupPending?: boolean;
+  /** Which add-ons the hosting's variables set (booleans only): the editor's Add-ons section on Firebase sites. */
+  hosting: HostingAddons;
 }) {
   const mode = useSyncExternalStore(noopSubscribe, readEditorMode, () => null);
-  if (mode) return <EditorShell mode={mode} ownerBackend={ownerBackend} published={data} initialIsPhone={initialIsPhone} />;
+  if (mode) return <EditorShell mode={mode} ownerBackend={ownerBackend} published={data} initialIsPhone={initialIsPhone} hosting={hosting} />;
   return (
     <>
       <SiteView data={data} initialIsPhone={initialIsPhone} />

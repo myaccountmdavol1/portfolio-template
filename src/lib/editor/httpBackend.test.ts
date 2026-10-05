@@ -19,6 +19,7 @@ describe('HTTP editor backend', () => {
   it('loads, saves and publishes the draft through the owner routes', async () => {
     const { fetch, calls } = fakeFetch({
       'GET /api/owner/draft': { body: { draft: seedSiteData } },
+      'GET /api/owner/published': { body: { published: seedSiteData } },
       'PUT /api/owner/draft': { body: { ok: true } },
       'POST /api/owner/publish': { body: { id: 'v1' } },
       'GET /api/owner/versions': { body: { versions: [{ id: 'v1', publishedAt: 'x', data: seedSiteData }] } },
@@ -31,6 +32,8 @@ describe('HTTP editor backend', () => {
     await backend.publish(seedSiteData);
     expect(calls[2]).toEqual({ url: '/api/owner/publish', method: 'POST', body: { data: seedSiteData } });
     await expect(backend.versions.list()).resolves.toHaveLength(1);
+    await expect(backend.loadPublished()).resolves.toEqual(seedSiteData);
+    expect(calls.at(-1)).toEqual({ url: '/api/owner/published', method: 'GET', body: undefined });
   });
 
   it('on 401 calls onUnauthorized and rejects with SignedOutError', async () => {

@@ -1,3 +1,4 @@
+import { spotifyCredentials } from '@/lib/addons/config';
 import { parseCurrentlyPlaying, parseRecentlyPlayed, type NowPlaying } from '@/lib/spotify/nowPlaying';
 import { readConnection, rotateRefreshToken } from '@/lib/spotify/tokenStore';
 
@@ -5,8 +6,10 @@ import { readConnection, rotateRefreshToken } from '@/lib/spotify/tokenStore';
 const json = (body: unknown) => Response.json(body, { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
 
 async function accessToken(): Promise<string | null> {
-  const { SPOTIFY_CLIENT_ID: id, SPOTIFY_CLIENT_SECRET: secret } = process.env;
-  if (!id || !secret) return null;
+  // The hosting's SPOTIFY_CLIENT_ID/SECRET, else the ones saved in Site settings, Add-ons.
+  const credentials = await spotifyCredentials();
+  if (!credentials) return null;
+  const { clientId: id, clientSecret: secret } = credentials;
   // Saved by /api/spotify/callback; SPOTIFY_REFRESH_TOKEN still works as a manual fallback.
   const saved = await readConnection().catch(() => null);
   const refresh = saved?.refreshToken ?? process.env.SPOTIFY_REFRESH_TOKEN;

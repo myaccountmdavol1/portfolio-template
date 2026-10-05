@@ -38,7 +38,7 @@ test('visitors who open /setup are sent to sign in', async ({ page }) => {
   await page.waitForURL('**/admin');
 });
 
-test('owner journey: claim, edit, publish, upload, sign out and in, reset the password, set up, start from a kit', async ({ page, browser }) => {
+test('owner journey: claim, edit, publish, upload, sign out and in, reset the password, set up, start from a kit, add-ons', async ({ page, browser }) => {
   test.setTimeout(300_000);
 
   await test.step('the home page of a new site invites the owner to claim it', async () => {
@@ -442,5 +442,100 @@ test('owner journey: claim, edit, publish, upload, sign out and in, reset the pa
     await expect(desktopIcon(v, 'Case Study One')).toHaveCount(0);
     await expect(v.locator('[data-layout="desktop"]')).toHaveAttribute('data-wallpaper', 'chalkboard');
     await visitor.close();
+  });
+
+  await test.step('add-ons: Messages stays hidden from visitors until a Claude key is saved; Spotify keys are checked first', async () => {
+    // The wizard's last page (from the step above) points to Add-ons.
+    await expect(page.getByText('Want a chat assistant or Now Playing? Turn them on in Site settings \u2192 Add-ons.')).toBeVisible();
+    const FAKE_KEY = 'sk-ant-e2e-fake-key-7f3a';
+    /** How many Messages icons a new visitor sees, and the title of a deep link to the app. */
+    const visitorView = async () => {
+      const visitor = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+      const v = await visitor.newPage();
+      await v.goto('/');
+      await expect(desktopIcon(v, 'Our classroom')).toBeVisible();
+      const icons = await desktopIcon(v, 'Messages').count();
+      await v.goto('/?open=messages-1');
+      await expect(desktopIcon(v, 'Our classroom')).toBeVisible();
+      const title = await v.title();
+      await visitor.close();
+      return { icons, title };
+    };
+
+    await page.goto('/?edit=1');
+    await toolbar(page).getByRole('button', { name: 'Add' }).click();
+    await page.getByRole('menu', { name: 'Add' }).getByRole('menuitem', { name: 'Messages (Ask me anything)' }).click();
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(inspector.getByTestId('chat-not-connected')).toContainText('Not connected \u2014 add your key in Site settings \u2192 Add-ons');
+    await expect
+      .poll(async () => ((await (await page.request.get('/api/owner/draft')).json()) as { draft: { apps: { id: string }[] } }).draft.apps.map((a) => a.id), { timeout: 20_000 })
+      .toContain('messages-1');
+    await expect(status(page)).toHaveText('Saved', { timeout: 20_000 });
+    page.once('dialog', (d) => d.accept());
+    await toolbar(page).getByRole('button', { name: 'Publish' }).click();
+    await expect(toolbar(page).getByRole('button', { name: 'Published \u2713' })).toBeVisible({ timeout: 20_000 });
+    // Published, but no key yet: visitors get no Messages, and a deep link to it is just the site.
+    expect(await visitorView()).toEqual({ icons: 0, title: 'Sam Taylor \u2014 Portfolio' });
+    // The page's copy of the site has no Messages, but the editor works from the stored one: after a reload,
+    // Discard draft changes goes back to the published site with its Messages app.
+    await page.reload();
+    await expect(desktopIcon(page, 'Messages')).toBeVisible({ timeout: 20_000 });
+    await toolbar(page).getByRole('button', { name: 'More' }).click();
+    page.once('dialog', (d) => d.accept());
+    await page.getByRole('menuitem', { name: 'Discard draft changes\u2026' }).click();
+    await expect(desktopIcon(page, 'Messages')).toBeVisible();
+    await expect(status(page)).toHaveText('Saved', { timeout: 20_000 });
+    const kept = (await (await page.request.get('/api/owner/draft')).json()) as { draft: { apps: { id: string }[] } };
+    expect(kept.draft.apps.map((a) => a.id)).toContain('messages-1');
+
+    await toolbar(page).getByRole('button', { name: 'Site' }).click();
+    const chat = inspector.getByRole('group', { name: 'Claude chat' });
+    await expect(chat.getByTestId('addon-status')).toHaveText('Not set up');
+    await chat.getByLabel('Claude API key').fill('not-a-valid-claude-key-123');
+    await chat.getByRole('button', { name: 'Check & save' }).click();
+    await expect(chat.getByRole('alert')).toHaveText('That key didn\u2019t work \u2014 check you copied all of it.');
+    await chat.getByLabel('Claude API key').fill(FAKE_KEY);
+    await chat.getByRole('button', { name: 'Check & save' }).click();
+    await expect(chat.getByTestId('addon-status')).toHaveText('Connected \u00b7 key ending \u20267f3a');
+    await expect(chat.getByLabel('Claude API key')).toHaveValue('');
+    expect(await (await page.request.get('/api/owner/addons')).text()).not.toContain(FAKE_KEY);
+    // No publish needed: the next visit has Messages.
+    expect(await visitorView()).toEqual({ icons: 1, title: 'Messages \u00b7 Sam Taylor \u2014 Portfolio' });
+    await desktopIcon(page, 'Messages').click();
+    await expect(inspector.getByRole('heading', { name: 'Ask me anything', exact: true })).toBeVisible();
+    await expect(inspector.getByTestId('chat-not-connected')).toHaveCount(0);
+
+    await toolbar(page).getByRole('button', { name: 'Site' }).click();
+    page.once('dialog', (d) => d.accept());
+    await chat.getByRole('button', { name: 'Remove' }).click();
+    await expect(chat.getByTestId('addon-status')).toHaveText('Not set up');
+    expect((await visitorView()).icons).toBe(0);
+
+    const spotify = inspector.getByRole('group', { name: 'Spotify Now Playing' });
+    await expect(spotify.getByTestId('addon-status')).toHaveText('Not set up');
+    await expect(spotify.getByTestId('spotify-redirect-uri')).toHaveText('http://localhost:3102/api/spotify/callback');
+    await spotify.getByLabel('Client ID').fill('e2e-client-id');
+    await spotify.getByLabel('Client secret').fill('bad-secret');
+    await spotify.getByRole('button', { name: 'Check & save' }).click();
+    await expect(spotify.getByRole('alert')).toHaveText('Spotify didn\u2019t accept those \u2014 check the Client ID and secret.');
+    await spotify.getByLabel('Client secret').fill('e2e-client-secret');
+    await spotify.getByRole('button', { name: 'Check & save' }).click();
+    await expect(spotify.getByTestId('addon-status')).toHaveText('Keys saved \u2014 not connected yet');
+    await expect(spotify.getByRole('link', { name: 'Connect Spotify \u2197' })).toHaveAttribute('href', '/api/spotify/login');
+    const login = await page.request.get('/api/spotify/login', { maxRedirects: 0 });
+    expect(login.status()).toBe(302);
+    expect(new URL(login.headers().location).searchParams.get('client_id')).toBe('e2e-client-id');
+    // A signed-out visitor can't start a connection or finish one: sent to /admin, never to Spotify.
+    const stranger = await browser.newContext();
+    const refused = await stranger.request.get('/api/spotify/login', { maxRedirects: 0 });
+    expect(refused.status()).toBe(302);
+    expect(refused.headers().location).toBe('http://localhost:3102/admin');
+    expect((await stranger.request.get('/api/spotify/callback?code=c&state=s')).status()).toBe(401);
+    await stranger.close();
+    expect(await (await page.request.get('/api/owner/addons')).text()).not.toContain('e2e-client-secret');
+    page.once('dialog', (d) => d.accept());
+    await spotify.getByRole('button', { name: 'Remove' }).click();
+    await expect(spotify.getByTestId('addon-status')).toHaveText('Not set up');
+    expect((await page.request.get('/api/spotify/login', { maxRedirects: 0 })).status()).toBe(503);
   });
 });

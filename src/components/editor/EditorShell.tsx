@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { SiteView } from '@/components/SiteView';
+import type { HostingAddons } from '@/lib/addons/types';
 import { createFirebaseBackend } from '@/lib/editor/firebaseBackend';
 import { setEditorFlag, type EditorMode } from '@/lib/editor/gate';
 import { createHttpBackend } from '@/lib/editor/httpBackend';
@@ -14,27 +15,29 @@ import { usePasswordSession } from './usePasswordSession';
 export interface EditorShellProps {
   mode: EditorMode;
   ownerBackend: 'firebase' | 'vercel';
+  /** The site as visitors get it (add-ons that aren't connected left out). */
   published: SiteData;
   initialIsPhone: boolean;
+  hosting: HostingAddons;
 }
 
-export function EditorShell({ mode, ownerBackend, published, initialIsPhone }: EditorShellProps) {
-  if (mode === 'local') return <LocalEditor published={published} initialIsPhone={initialIsPhone} />;
+export function EditorShell({ mode, ownerBackend, published, initialIsPhone, hosting }: EditorShellProps) {
+  if (mode === 'local') return <LocalEditor published={published} initialIsPhone={initialIsPhone} hosting={hosting} />;
   return ownerBackend === 'vercel' ? (
-    <HttpEditor published={published} initialIsPhone={initialIsPhone} />
+    <HttpEditor published={published} initialIsPhone={initialIsPhone} hosting={hosting} />
   ) : (
-    <FirebaseEditor published={published} initialIsPhone={initialIsPhone} />
+    <FirebaseEditor published={published} initialIsPhone={initialIsPhone} hosting={hosting} />
   );
 }
 
 type Props = Omit<EditorShellProps, 'mode' | 'ownerBackend'>;
 
-function LocalEditor({ published, initialIsPhone }: Props) {
+function LocalEditor({ published, initialIsPhone, hosting }: Props) {
   const backend = useMemo(() => createLocalBackend(window.localStorage), []);
-  return <EditorApp backend={backend} published={published} initialIsPhone={initialIsPhone} onSignOut={null} />;
+  return <EditorApp backend={backend} published={published} initialIsPhone={initialIsPhone} hosting={hosting} onSignOut={null} />;
 }
 
-function FirebaseEditor({ published, initialIsPhone }: Props) {
+function FirebaseEditor({ published, initialIsPhone, hosting }: Props) {
   const session = useOwnerSession();
   const backend = useMemo(() => (session.status === 'owner' ? createFirebaseBackend() : null), [session.status]);
 
@@ -51,6 +54,7 @@ function FirebaseEditor({ published, initialIsPhone }: Props) {
       backend={backend}
       published={published}
       initialIsPhone={initialIsPhone}
+      hosting={hosting}
       onSignOut={() => {
         setEditorFlag(false);
         void session.signOut().then(() => window.location.assign('/'));
@@ -59,7 +63,7 @@ function FirebaseEditor({ published, initialIsPhone }: Props) {
   );
 }
 
-function HttpEditor({ published, initialIsPhone }: Props) {
+function HttpEditor({ published, initialIsPhone, hosting }: Props) {
   const { session } = usePasswordSession();
   const ready = session.status === 'ready' ? session : null;
   const owner = ready?.owner ?? false;
@@ -87,6 +91,7 @@ function HttpEditor({ published, initialIsPhone }: Props) {
       backend={backend}
       published={published}
       initialIsPhone={initialIsPhone}
+      hosting={hosting}
       onSignOut={() => {
         setEditorFlag(false);
         void fetch('/api/owner/session', { method: 'DELETE' })

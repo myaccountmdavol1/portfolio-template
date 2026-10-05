@@ -31,6 +31,7 @@ import {
 import { isInPhoneDock, movePhoneItem, resetPhoneLayout, setPhoneWidgetSize } from '@/lib/editor/phoneMutations';
 import { PHONE_DOCK_MAX } from '@/lib/phoneLayout';
 import { APP_TYPE_LABELS, APP_TYPES, newAppId } from '@/lib/editor/starters';
+import type { HostingAddons } from '@/lib/addons/types';
 import type { AppType, IconSpec, SiteData } from '@/lib/types';
 import { IconPackContext } from '@/components/IconPackContext';
 import { ContextMenu } from './ContextMenu';
@@ -40,6 +41,7 @@ import { EditorCoachMarks } from './EditorCoachMarks';
 import { IconPicker } from './IconPicker';
 import { Inspector, INSPECTOR_W } from './Inspector';
 import { PhoneFrame } from './PhoneFrame';
+import { useAddons } from './useAddons';
 import { useDraft } from './useDraft';
 import { MediaLibrary } from './MediaLibrary';
 import { VersionHistory } from './VersionHistory';
@@ -49,6 +51,8 @@ interface EditorAppProps {
   backend: EditorBackend;
   published: SiteData;
   initialIsPhone: boolean;
+  /** Which add-ons the hosting's variables set (the read-only Add-ons section on Firebase and in local mode). */
+  hosting: HostingAddons;
   /** null in local mode (nothing to sign out of). */
   onSignOut: (() => void) | null;
 }
@@ -57,9 +61,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
 }
 
-export function EditorApp({ backend, published, initialIsPhone, onSignOut }: EditorAppProps) {
+export function EditorApp({ backend, published, initialIsPhone, hosting, onSignOut }: EditorAppProps) {
   const router = useRouter();
-  const draft = useDraft(backend, published);
+  const draft = useDraft(backend, published, hosting.chat);
+  const addons = useAddons(backend.kind, hosting);
   const isPhoneDevice = useIsPhone(initialIsPhone);
   const [editing, setEditing] = useState(() => startsInEditMode(window.location.search));
   const [preview, setPreview] = useState<Preview>(() => (initialIsPhone ? 'phone' : 'desktop'));
@@ -114,6 +119,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
       await draft.flush();
       await backend.publish(snapshot);
       setPublishedDraft(snapshot);
+      draft.markPublished(snapshot);
       setPublishing('idle');
       router.refresh(); // re-read published data on the server, so Edit off shows the new live site
     } catch (err) {
@@ -134,8 +140,8 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
     if (id === 'media') setPicker({ kind: 'media' });
     // The wizard starts from the unsaved mirror, else the draft, so nothing typed here is lost.
     if (id === 'setup') router.push('/setup?again=1');
-    if (id === 'discard' && window.confirm('Throw away your draft and go back to what’s live? You can undo this.')) {
-      apply(() => published);
+    if (id === 'discard' && ready && window.confirm('Throw away your draft and go back to what’s live? You can undo this.')) {
+      apply(() => draft.published);
       setSelection(null);
     }
     if (id === 'leave') {
@@ -208,6 +214,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
       guestbook: backend.guestbook,
       hallOfFame: backend.hallOfFame,
       inbox: backend.inbox,
+      addons,
       openMenu: setMenu,
       renamingId,
       setRenamingId,
@@ -216,7 +223,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
       openMediaLibrary: (options) => setPicker({ kind: 'media', ...options }),
       runAppAction,
     }),
-    [data, apply, selection, backend, renamingId, runAppAction],
+    [data, apply, selection, backend, addons, renamingId, runAppAction],
   );
 
   const runDockAction = useCallback(
@@ -288,7 +295,7 @@ export function EditorApp({ backend, published, initialIsPhone, onSignOut }: Edi
 
   const pickerTarget = picker?.kind === 'icon' ? picker.target : null;
   // Everything the draft and the live site point at, so the media library can mark files “In use”.
-  const usedUrls = picker?.kind === 'media' ? JSON.stringify([data, published]) : '';
+  const usedUrls = picker?.kind === 'media' ? JSON.stringify([data, draft.published]) : '';
   const menuLogo = data.site.menuBar.logo;
   const pickerIcon =
     pickerTarget?.kind === 'app'

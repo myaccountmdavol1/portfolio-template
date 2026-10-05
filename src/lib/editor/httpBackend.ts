@@ -85,6 +85,7 @@ export function createHttpBackend(options: HttpBackendOptions): EditorBackend {
   return {
     kind: 'http',
     loadDraft: async () => (await call<{ draft: SiteData | null }>('/api/owner/draft')).draft,
+    loadPublished: async () => (await call<{ published: SiteData | null }>('/api/owner/published')).published,
     saveDraft: (next, prev) => send('/api/owner/draft', 'PUT', { next, prev }),
     publish: (data) => send('/api/owner/publish', 'POST', { data }),
     async upload(file, folder) {

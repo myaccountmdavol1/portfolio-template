@@ -16,6 +16,7 @@ The setup code is a secret you make up once, while deploying. It proves the site
 - Keep it somewhere safe, such as a password manager. You use it once to claim your site (you choose your password then), and again if you ever forget your password: click “Forgot password?” on `/admin`.
 - It isn’t your password. Sign in with the password you chose when you claimed the site. Changing `SETUP_CODE` later doesn’t change your password; to set a new password, click “Forgot password?” on `/admin`.
 - To change it: in Vercel, open your project → **Settings** → **Environment Variables** → `SETUP_CODE` → **Edit**. Then go to **Deployments**, open the ⋯ menu on the newest deployment and choose **Redeploy**.
+- Keys saved in **Add-ons** are encrypted with your setup code. After you change it, **Site settings → Add-ons** asks you to enter them again, and chat stays hidden until you do.
 
 ## If something goes wrong
 
@@ -24,6 +25,15 @@ The setup code is a secret you make up once, while deploying. It proves the site
 - **`/admin` says your setup code is missing or too short.** Set `SETUP_CODE` to at least 12 characters (see [Your setup code](#your-setup-code)), then redeploy.
 - **You forgot your password.** Open `/admin`, click “Forgot password?”, and use your setup code to choose a new one.
 - **Sign-in says “That’s your setup code, not your password.”** Use the password you chose when you claimed the site, or click “Forgot password?” to choose a new one with the setup code.
+
+## Add-ons
+
+Two optional extras, turned on in the editor under **Site settings → Add-ons**. Each key is checked as soon as you save it, then kept encrypted on your site’s server. It never appears in your published site, and no redeploy is needed.
+
+- **Claude chat** lets visitors ask your Messages apps about your work. Get a key at [console.anthropic.com → API keys](https://console.anthropic.com/settings/keys), paste it into the Claude chat card and click **Check & save**. Until a key is saved, Messages apps stay hidden from visitors (the editor still shows them, marked “Not connected”). Chat is rate-limited (15 messages per visitor per hour and 100 per day by default), which caps what it can cost you.
+- **Spotify Now Playing** shows what you’re listening to in Control Center. Create an app at [developer.spotify.com](https://developer.spotify.com/dashboard), add the redirect URI the card shows (it ends in `/api/spotify/callback`), then paste the app’s Client ID and Client secret and click **Check & save**. Finally click **Connect Spotify ↗** and allow access. Spotify asks you to reconnect about every 6 months; use the same button.
+
+Hosting variables take priority. If `ANTHROPIC_API_KEY`, or both `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET`, are set in your Vercel project’s **Environment Variables**, the site uses them and the card says “Set by your hosting”. Sites on the Firebase backend set add-ons this way only.
 
 ## Run it locally
 

@@ -15,6 +15,7 @@ const publish = await import('./publish/route');
 const versions = await import('./versions/route');
 const guestbook = await import('./guestbook/route');
 const inbox = await import('./inbox/route');
+const publishedRoute = await import('./published/route');
 
 const sql = pgliteSql();
 let cookie = '';
@@ -55,6 +56,16 @@ describe('owner data routes', () => {
     expect(h.revalidated).toEqual(['published-site']);
     const list = (await (await versions.GET(req('/api/owner/versions'))).json()) as { versions: { id: string }[] };
     expect(list.versions.map((v) => v.id)).toEqual([id]);
+  });
+
+  it('give the editor the published site exactly as stored, Messages apps included', async () => {
+    expect(await (await publishedRoute.GET(req('/api/owner/published'))).json()).toEqual({ published: null });
+    const { starterApp } = await import('@/lib/editor/starters');
+    const withChat = { ...seedSiteData, apps: [...seedSiteData.apps, starterApp('messages', 'messages-1', 99)] };
+    await publish.POST(req('/api/owner/publish', { method: 'POST', body: JSON.stringify({ data: withChat }) }));
+    const { published } = (await (await publishedRoute.GET(req('/api/owner/published'))).json()) as { published: { apps: { id: string }[] } };
+    expect(published.apps.map((a) => a.id)).toContain('messages-1');
+    expect((await publishedRoute.GET(req('/api/owner/published', {}, false))).status).toBe(401);
   });
 
   it('moderate the guestbook and inbox', async () => {

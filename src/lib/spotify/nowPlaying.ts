@@ -1,5 +1,5 @@
 // Spotify “Now Playing” for Control Center: what the owner is listening to right now, or last played.
-// Needs SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, and SPOTIFY_REFRESH_TOKEN (see /api/spotify/login).
+// Needs Spotify credentials (hosting variables or Site settings, Add-ons) and a connection (see /api/spotify/login).
 
 export interface NowPlaying {
   isPlaying: boolean;

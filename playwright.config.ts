@@ -1,6 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const blankSecrets = { ANTHROPIC_API_KEY: '', FIREBASE_PROJECT_ID: '', FIREBASE_CLIENT_EMAIL: '', FIREBASE_PRIVATE_KEY: '', FIRESTORE_EMULATOR_HOST: '' };
+const blankSecrets = {
+  ANTHROPIC_API_KEY: '',
+  SPOTIFY_CLIENT_ID: '',
+  SPOTIFY_CLIENT_SECRET: '',
+  SPOTIFY_REFRESH_TOKEN: '',
+  FIREBASE_PROJECT_ID: '',
+  FIREBASE_CLIENT_EMAIL: '',
+  FIREBASE_PRIVATE_KEY: '',
+  FIRESTORE_EMULATOR_HOST: '',
+};
 
 const phoneUse = {
   browserName: 'chromium' as const,
@@ -72,7 +81,9 @@ export default defineConfig({
     {
       command: 'npx next dev --port 3101',
       url: 'http://localhost:3101',
-      env: { NEXT_DIST_DIR: '.next-e2e-links', PORTFOLIO_FIXTURE: 'deep-links', ...blankSecrets },
+      // The fixture's Messages app is shown only while chat counts as connected. The tests fake /api/chat in the
+      // browser, so this placeholder key is never sent anywhere.
+      env: { NEXT_DIST_DIR: '.next-e2e-links', PORTFOLIO_FIXTURE: 'deep-links', ...blankSecrets, ANTHROPIC_API_KEY: 'e2e-placeholder-not-a-key' },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
@@ -86,6 +97,9 @@ export default defineConfig({
         PGLITE_DIR: '.data/e2e-vercel/db',
         MEDIA_DIR: '.data/e2e-vercel/media',
         SETUP_CODE: 'e2e-setup-code',
+        // Add-ons checks keys without calling Anthropic or Spotify (src/lib/addons/check.ts). Ignored when NODE_ENV is
+        // production, so it can never apply to a deployed site; `next dev` runs as development.
+        ADDONS_FAKE_CHECK: '1',
         DATABASE_URL: '',
         POSTGRES_URL: '',
         BLOB_READ_WRITE_TOKEN: '',

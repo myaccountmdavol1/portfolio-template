@@ -164,6 +164,30 @@ export function storeContract(name: string, setup: { store: () => ServerStore; r
       await expect(s.spotify.read()).resolves.toEqual({ refreshToken: 'r2', spotifyUserId: 'alex', updatedAt: '2026-09-02T00:00:00.000Z' });
     });
 
+    it('spotify: remove forgets the connection, and removing nothing is fine', async () => {
+      const s = setup.store();
+      await expect(s.spotify.remove()).resolves.toBeUndefined();
+      await s.spotify.save({ refreshToken: 'r1', spotifyUserId: 'alex' });
+      await s.spotify.remove();
+      await expect(s.spotify.read()).resolves.toBeNull();
+    });
+
+    it('addons: get is null, set then get round-trips, and a second set replaces the whole value', async () => {
+      const s = setup.store();
+      await expect(s.addons.get()).resolves.toBeNull();
+      const sealed = { v: 1 as const, salt: 'c2FsdA==', iv: 'aXY=', tag: 'dGFn', data: 'ZGF0YQ==' };
+      const both = { anthropicKey: sealed, spotify: { clientId: 'client-1', clientSecret: sealed }, updatedAt: '2026-10-05T00:00:00.000Z' };
+      await s.addons.set(both);
+      await expect(s.addons.get()).resolves.toEqual(both);
+      await s.addons.set({ spotify: both.spotify, updatedAt: '2026-10-06T00:00:00.000Z' });
+      await expect(s.addons.get()).resolves.toEqual({ spotify: both.spotify, updatedAt: '2026-10-06T00:00:00.000Z' });
+      // Keys left undefined are dropped, never stored as null.
+      await s.addons.set({ anthropicKey: undefined, updatedAt: '2026-10-07T00:00:00.000Z' });
+      expect(await s.addons.get()).toStrictEqual({ updatedAt: '2026-10-07T00:00:00.000Z' });
+      // Kept apart from the Spotify connection.
+      await expect(s.spotify.read()).resolves.toBeNull();
+    });
+
     it('moderation on an id that no longer exists does nothing', async () => {
       const s = setup.store();
       await expect(s.guestbook.approve('missing')).resolves.toBeUndefined();

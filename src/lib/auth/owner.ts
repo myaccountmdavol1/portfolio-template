@@ -98,6 +98,16 @@ export async function isOwnerRequest(store: OwnerStore, request: Request, now = 
   return sessionMatches(await store.owner.get(), readCookie(request, SESSION_COOKIE), now);
 }
 
+/**
+ * Whether this request may connect a Spotify account (/api/spotify/login and /callback). On Vercel-backend sites only
+ * the signed-in owner may: once keys are saved in Add-ons, a visitor could otherwise connect their own account first.
+ * Firebase sites (no vercelStore) keep the old rule: the first account connected is kept and any other is refused.
+ */
+export async function mayConnectSpotify(request: Request, storeFor: () => OwnerStore | null = vercelStore): Promise<boolean> {
+  const store = storeFor();
+  return store ? isOwnerRequest(store, request) : true;
+}
+
 /** The setup wizard was finished (after a successful publish): /admin stops sending the owner to /setup. */
 export async function markSetupDone(store: OwnerStore, now = new Date()): Promise<void> {
   const owner = await store.owner.get();

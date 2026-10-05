@@ -1,16 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createEventReader, type ChatEvent } from '@/lib/chat/events';
 
 // The route with a fake model: each `stream()` call returns the next scripted turn.
 
 const streamMock = vi.hoisted(() => vi.fn());
+const h = vi.hoisted(() => ({ store: null as unknown, apiKeys: [] as (string | null | undefined)[] }));
 
 vi.mock('@anthropic-ai/sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@anthropic-ai/sdk')>();
   // Real error classes (the route checks them with instanceof); only the network call is faked.
   class FakeAnthropic extends actual.default {
-    constructor() {
+    constructor(options?: { apiKey?: string | null }) {
       super({ apiKey: 'test-key' });
+      h.apiKeys.push(options?.apiKey);
       this.beta.messages.stream = streamMock;
     }
   }
@@ -26,9 +28,11 @@ vi.mock('@/lib/getSiteData', async () => {
   return { getPublishedSite: async () => withChat };
 });
 
-vi.mock('@/lib/store', () => ({ getStore: () => null }));
+vi.mock('@/lib/store', () => ({ getStore: () => h.store }));
 
 const { POST } = await import('./route');
+const { encryptSecret } = await import('@/lib/addons/secrets');
+const { memoryCounterStore } = await import('@/lib/chat/limits');
 
 interface Block {
   type: string;
@@ -73,6 +77,44 @@ beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = 'test-key';
   process.env.CHAT_LIMIT_PER_VISITOR_HOURLY = '1000';
   streamMock.mockReset();
+  h.store = null;
+  h.apiKeys = [];
+});
+afterEach(() => vi.unstubAllEnvs());
+
+const ask = (question: string) =>
+  POST(
+    new Request('http://localhost/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId: 'm-1', messages: [{ role: 'user', content: question }] }),
+    }),
+  );
+
+describe('POST /api/chat: which key', () => {
+  it('passes the hosting key to the client explicitly', async () => {
+    streamMock.mockReturnValueOnce(turn([text('Hi!')]));
+    await chat('Hello');
+    expect(h.apiKeys).toEqual(['test-key']);
+  });
+
+  it('uses the key saved in Add-ons when the hosting sets none', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', '');
+    vi.stubEnv('SETUP_CODE', 'chat-route-setup-code');
+    const sealed = encryptSecret('sk-ant-saved', 'chat-route-setup-code');
+    h.store = { addons: { get: async () => ({ anthropicKey: sealed, updatedAt: 'x' }) }, counters: memoryCounterStore(), chatLogs: { append: async () => {} } };
+    streamMock.mockReturnValueOnce(turn([text('Hi!')]));
+    await chat('Hello');
+    expect(h.apiKeys).toEqual(['sk-ant-saved']);
+  });
+
+  it('answers 503 unconfigured with no key anywhere, before calling the model', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', '');
+    const res = await ask('Hello');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ code: 'unconfigured' });
+    expect(streamMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/chat', () => {

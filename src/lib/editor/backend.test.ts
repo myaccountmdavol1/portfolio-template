@@ -29,6 +29,12 @@ describe('createLocalBackend', () => {
     await expect(backend.loadDraft()).resolves.toEqual(seedSiteData);
   });
 
+  it('has no published copy of its own (the page\u2019s copy is used)', async () => {
+    const store = memoryStore();
+    await createLocalBackend(store).publish(seedSiteData);
+    await expect(createLocalBackend(store).loadPublished()).resolves.toBeNull();
+  });
+
   it('publish writes a separate key', async () => {
     const store = memoryStore();
     await createLocalBackend(store).publish(seedSiteData);

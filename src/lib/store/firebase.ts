@@ -1,4 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore';
+import type { StoredAddons } from '../addons/types';
 import { firestoreCounterStore } from '../chat/firestoreCounter';
 import type { ChatLog } from '../chat/log';
 import { appendChatLog } from '../chat/firestoreLog';
@@ -22,6 +23,8 @@ const ignoreMissing = (err: unknown) => {
 export function firebaseStore(db: Firestore): ServerStore {
   // Server-only. `private/spotify` is closed to every browser by firestore.rules.
   const spotifyDoc = () => db.doc('private/spotify');
+  // Add-on keys, also closed to every browser. The editor never writes them on Firebase sites (hosting variables do).
+  const addonsDoc = () => db.doc('private/addons');
   return {
     kind: 'firebase',
     site: {
@@ -94,6 +97,19 @@ export function firebaseStore(db: Firestore): ServerStore {
       },
       async rotate(refreshToken, now = new Date()) {
         await spotifyDoc().set({ refreshToken, updatedAt: now.toISOString() }, { merge: true });
+      },
+      async remove() {
+        await spotifyDoc().delete();
+      },
+    },
+    addons: {
+      async get() {
+        const snap = await addonsDoc().get();
+        return snap.exists ? (snap.data() as StoredAddons) : null;
+      },
+      async set(value) {
+        // Firestore refuses undefined fields; a JSON round trip drops them, as Postgres does.
+        await addonsDoc().set(JSON.parse(JSON.stringify(value)) as StoredAddons);
       },
     },
   };

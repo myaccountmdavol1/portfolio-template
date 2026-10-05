@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { Portfolio } from '@/components/Portfolio';
+import { hostingAddons } from '@/lib/addons/config';
+import { getVisitorSite } from '@/lib/addons/visitorSite';
 import { isSetupPending } from '@/lib/auth/owner';
 import { deepLinkParams, linkPreview, readDeepLink, resolveDeepLink, withDeepLink } from '@/lib/deepLink';
 import { guessIsPhone } from '@/lib/device';
-import { getPublishedSite } from '@/lib/getSiteData';
 import { resolveBackend } from '@/lib/store';
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -19,7 +20,8 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
     if (first) query.set(key, first);
   }
   const { open, item } = readDeepLink(query.toString());
-  const data = await getPublishedSite();
+  // What visitors get: a deep link to an app that isn't shown (Messages without a key) has no preview.
+  const data = await getVisitorSite();
   const target = resolveDeepLink(data, open, item);
   const preview = target && linkPreview(data, target);
   const link = target && deepLinkParams(data, target);
@@ -36,7 +38,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 }
 
 export default async function Home() {
-  const [data, requestHeaders, setupPending] = await Promise.all([getPublishedSite(), headers(), isSetupPending()]);
+  const [data, requestHeaders, setupPending] = await Promise.all([getVisitorSite(), headers(), isSetupPending()]);
   const initialIsPhone = guessIsPhone(requestHeaders.get('user-agent'), requestHeaders.get('sec-ch-ua-mobile'));
   return (
     <Portfolio
@@ -44,6 +46,7 @@ export default async function Home() {
       initialIsPhone={initialIsPhone}
       ownerBackend={resolveBackend(process.env) === 'vercel' ? 'vercel' : 'firebase'}
       setupPending={setupPending}
+      hosting={hostingAddons()}
     />
   );
 }

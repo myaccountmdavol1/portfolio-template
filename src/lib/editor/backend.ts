@@ -28,6 +28,12 @@ export interface MediaItem {
 export interface EditorBackend {
   kind: 'firebase' | 'local' | 'http';
   loadDraft(): Promise<SiteData | null>;
+  /**
+   * The published site as stored. The page's copy leaves out add-ons that aren't connected (a Messages app without a
+   * Claude key), so a first draft and Discard start from this one. null: nothing published yet, or (local mode) use the
+   * page's copy.
+   */
+  loadPublished(): Promise<SiteData | null>;
   /** `prev` is the last successfully saved value (or null), so backends can write only what changed. */
   saveDraft(next: SiteData, prev: SiteData | null): Promise<void>;
   publish(data: SiteData): Promise<void>;

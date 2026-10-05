@@ -270,6 +270,7 @@ export function LiveStep({ url, tour }: { url: string; tour: boolean }) {
           Start editing
         </Link>
       </div>
+      <p className="m-0 mt-1 max-w-sm text-xs text-[#6b675f]">Want a chat assistant or Now Playing? Turn them on in Site settings &rarr; Add-ons.</p>
       <p aria-live="polite" className={copied === 'copied' ? 'm-0 text-xs text-[#6b675f]' : 'sr-only'}>
         {copied === 'copied' ? 'Copied \u2713' : ''}
       </p>

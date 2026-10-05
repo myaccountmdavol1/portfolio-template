@@ -13,6 +13,7 @@ export function createFirebaseBackend(): EditorBackend {
   return {
     kind: 'firebase',
     loadDraft: () => readScope(db, 'draft'),
+    loadPublished: () => readScope(db, 'published'),
     saveDraft: (next, prev) => writeDraft(db, next, prev),
     publish: async (data) => {
       await publishSite(db, data);

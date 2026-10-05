@@ -32,6 +32,10 @@ export function createLocalBackend(store: KeyValueStore, readFile: (file: File) 
       const raw = store.getItem(LOCAL_DRAFT_KEY);
       return raw ? (JSON.parse(raw) as SiteData) : null;
     },
+    // Local mode has no server copy: the page's published site (the sample) is the published site.
+    async loadPublished() {
+      return null;
+    },
     async saveDraft(next) {
       store.setItem(LOCAL_DRAFT_KEY, JSON.stringify(next));
     },
